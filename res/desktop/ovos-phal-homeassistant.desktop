@@ -1,0 +1,11 @@
+[Desktop Entry]
+X-DBUS-StartupType=None
+X-KDE-StartupNotify=false
+Version=1.0
+Terminal=false
+Type=Application
+Name=Home Assistant
+Exec=mycroft-gui-app --hideTextInput --skill=ovos-PHAL-plugin-homeassistant.home
+Icon=ovos-phal-homeassistant
+Categories=VoiceApp
+StartupNotify=false
