@@ -24,3 +24,18 @@ def map_entity_to_device_type(entity):
         return "vacuum"
     else:
         return None
+
+def check_if_device_type_is_group(device_attributes):
+    """Check if a device is a group.
+
+    Args:
+        device_attributes (dict): The attributes of the device.
+    """
+    # Check if icon name in attributes has "-group" in it
+    if "icon" in device_attributes:
+        if "-group" in device_attributes["icon"]:
+            return True
+        else:
+            return False
+    else:
+        return False

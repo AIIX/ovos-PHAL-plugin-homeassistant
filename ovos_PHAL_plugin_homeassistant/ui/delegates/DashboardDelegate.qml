@@ -80,7 +80,6 @@ ItemDelegate {
     }
 
     onClicked: {
-        console.log(modelData.icon)
         Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.device.dashboard", {"device_type": deviceType})
         change_tab_to_type(deviceType)
     }

@@ -6,270 +6,447 @@ import Mycroft 1.0 as Mycroft
 import QtGraphicalEffects 1.0
 import "../code/helper.js" as HelperJS
 
-Rectangle {
+Control {
     id: mediaplayerTemplateDashboardCard
     property var device: modelData
     Layout.fillWidth: true
     Layout.fillHeight: true
-    radius: 10
     property bool isOnline: device.state !== "off" && device.state !== "unknown" && device.state !== "unavailable" ? 1 : 0
-    color: isOnline ? Kirigami.Theme.highlightColor : (HelperJS.isLight(Kirigami.Theme.backgroundColor) ? Qt.darker(Kirigami.Theme.backgroundColor, 1.5) : Qt.lighter(Kirigami.Theme.backgroundColor, 1.5))
 
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: Mycroft.Units.gridUnit / 2
 
-        Label {
-            id: appName
-            text: isOnline ? device.attributes.app_name : "Status: Device Offline"
-            Layout.fillWidth: true       
-            Layout.preferredHeight: Mycroft.Units.gridUnit * 4
-            elide: Text.ElideRight
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            font.pixelSize: Mycroft.Units.gridUnit * 1.5
-            color: isOnline ? Kirigami.Theme.textColor : Kirigami.Theme.highlightColor
+    background: Rectangle {
+        radius: 10
+        color: isOnline ? Kirigami.Theme.highlightColor : (HelperJS.isLight(Kirigami.Theme.backgroundColor) ? Qt.darker(Kirigami.Theme.backgroundColor, 1.5) : Qt.lighter(Kirigami.Theme.backgroundColor, 1.5))
+
+        Image {
+            id: mediaArt
+            anchors.fill: parent
+            source: device.attributes.entity_picture ? device.attributes.entity_picture : ""
+            visible: device.attributes.entity_picture && device.state == "playing" || device.state == "paused" ? 1 : 0
+            enabled: device.attributes.entity_picture && device.state == "playing" || device.state == "paused" ? 1 : 0
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-
-            Button {
-                id: powerButton
-                Layout.alignment: Qt.AlignLeft            
-                Layout.preferredWidth: Kirigami.Units.iconSizes.huge
-                Layout.preferredHeight: Kirigami.Units.iconSizes.huge            
-
-                background: Rectangle {
-                    color: "transparent"
-                    radius: 100
-                }
-
-                contentItem: Kirigami.Icon {
-                    source: "system-shutdown-symbolic"
-                    width: width * 0.8
-                    height: width * 0.8
-
-                    ColorOverlay {
-                        id: powerButtonOverlayColor
-                        anchors.fill: parent
-                        source: parent
-                        color: Kirigami.Theme.textColor
-                    }
-                }
-
-                onClicked: {
-                    console.log(device.state)
-                    if(device.state == "off") {
-                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.device.turn_on", { "device_id": device.id })
-                    }
-                    else {
-                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.device.turn_off", { "device_id": device.id })
-                    }
-                }
-
-                onPressed: {
-                    powerButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
-                }
-                onReleased: {
-                    powerButtonOverlayColor.color = Kirigami.Theme.textColor
-                }
-            }
-
-            Button {
-                id: previousButton
-                Layout.alignment: Qt.AlignLeft            
-                Layout.preferredWidth: Kirigami.Units.iconSizes.huge
-                Layout.preferredHeight: Kirigami.Units.iconSizes.huge
-                visible: device.state == "playing" || device.state == "paused"
-                enabled: device.state == "playing" || device.state == "paused"
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                contentItem: Kirigami.Icon {
-                    source: "media-skip-backward-symbolic"
-                    width: width * 0.8
-                    height: width * 0.8
-
-                    ColorOverlay {
-                        id: previousButtonOverlayColor
-                        anchors.fill: parent
-                        source: parent
-                        color: Kirigami.Theme.textColor
-                    }
-                }
-
-                onClicked: {
-                    Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", { 
-                        "device_id": device.id,
-                        "function": "media_previous_track"
-                    })
-                }
-                onPressed: {
-                    previousButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
-                }
-                onReleased: {
-                    previousButtonOverlayColor.color = Kirigami.Theme.textColor
-                }
-            }
-
-            Button {
-                id: playButton
-                Layout.alignment: Qt.AlignLeft            
-                Layout.preferredWidth: Kirigami.Units.iconSizes.huge
-                Layout.preferredHeight: Kirigami.Units.iconSizes.huge
-                visible: device.state == "playing" || device.state == "paused"  
-                enabled: device.state == "playing" || device.state == "paused"          
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                contentItem: Kirigami.Icon {
-                    source: device.state == "playing" ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
-                    width: width * 0.8
-                    height: width * 0.8
-
-                    ColorOverlay {
-                        id: playButtonOverlayColor
-                        anchors.fill: parent
-                        source: parent
-                        color: Kirigami.Theme.textColor
-                    }
-                }
-
-                onClicked: {
-                    if(device.state == "paused") {
-                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
-                            "device_id": device.id,
-                            "function_name": "play_media",
-                            "function_args": {}
-                        })
-                    } else if(device.state == "playing") {
-                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
-                            "device_id": device.id,
-                            "function_name": "media_pause",
-                            "function_args": {}
-                        })
-                    }
-                }
-                onPressed: {
-                    playButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
-                }
-                onReleased: {
-                    playButtonOverlayColor.color = Kirigami.Theme.textColor
-                }
-            }
-
-            Button {
-                id: nextButton
-                Layout.alignment: Qt.AlignLeft            
-                Layout.preferredWidth: Kirigami.Units.iconSizes.huge
-                Layout.preferredHeight: Kirigami.Units.iconSizes.huge
-                visible: device.state == "playing" || device.state == "paused"
-                enabled: device.state == "playing" || device.state == "paused"      
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                contentItem: Kirigami.Icon {
-                    source: "media-skip-forward-symbolic"
-                    width: width * 0.8
-                    height: width * 0.8
-
-                    ColorOverlay {
-                        id: nextButtonOverlayColor
-                        anchors.fill: parent
-                        source: parent
-                        color: Kirigami.Theme.textColor
-                    }
-                }
-
-                onClicked: {
-                    Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", { 
-                        "device_id": device.id,
-                        "function": "media_next_track"
-                    })
-                }
-                onPressed: {
-                    nextButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
-                }
-                onReleased: {
-                    nextButtonOverlayColor.color = Kirigami.Theme.textColor
-                }
-            }
+        Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.5)
+            visible: device.state == "playing" || device.state == "paused" ? 1 : 0
+            enabled: device.state == "playing" || device.state == "paused" ? 1 : 0
         }
+    }
 
-        Button {
-            id: selectMediaButton
-            Layout.fillWidth: true
-            Layout.preferredHeight: Mycroft.Units.gridUnit * 3
-            visible: false
-            enabled: false
+    contentItem: Item {
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: Mycroft.Units.gridUnit / 2
 
-            background: Rectangle {
-                id: selectMediaButtonBackground
+            Rectangle {
                 Kirigami.Theme.inherit: false
                 Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumHeight: Mycroft.Units.gridUnit * 2
+                Layout.maximumHeight: Mycroft.Units.gridUnit * 5
                 color: Kirigami.Theme.backgroundColor
-                radius: Kirigami.Units.gridUnit
-            }
+                radius: 8
 
-            SequentialAnimation {
-                id: selectMediaButtonAnimation
-
-                PropertyAnimation {
-                    target: selectMediaButtonBackground
-                    property: "color"
-                    from: Kirigami.Theme.backgroundColor
-                    to: Kirigami.Theme.highlightColor
-                    duration: 100
+                Label {
+                    id: appName
+                    text: isOnline ? device.attributes.app_name : qsTr("Status: Device Offline")
+                    anchors.fill: parent
+                    anchors.margins: Mycroft.Units.gridUnit / 2
+                    elide: Text.ElideRight
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 10
+                    font.pixelSize: Mycroft.Units.gridUnit
+                    horizontalAlignment: Text.AlignLeft
+                    verticalAlignment: Text.AlignVCenter
+                    color: Kirigami.Theme.textColor
+                    visible: device.state == "playing" || device.state == "paused" ? 0 : 1
+                    enabled: device.state == "playing" || device.state == "paused" ? 0 : 1
                 }
 
-                PropertyAnimation {
-                    target: selectMediaButtonBackground
-                    property: "color"
-                    from: Kirigami.Theme.highlightColor
-                    to: Kirigami.Theme.backgroundColor
-                    duration: 100
+                Label {
+                    id: mediaTitle
+                    text: device.attributes.media_title ? device.attributes.media_title : qsTr("Title: Not Available")
+                    anchors.fill: parent
+                    anchors.margins: Mycroft.Units.gridUnit / 2
+                    elide: Text.ElideRight
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 10
+                    font.pixelSize: Mycroft.Units.gridUnit
+                    horizontalAlignment: Text.AlignLeft
+                    verticalAlignment: Text.AlignVCenter
+                    color: Kirigami.Theme.textColor
+                    visible: device.state == "playing" || device.state == "paused" ? 1 : 0
+                    enabled: device.state == "playing" || device.state == "paused" ? 1 : 0
                 }
             }
 
-            contentItem: Item {
-                RowLayout {
-                    id: selectMediaButtonLayout
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumHeight: Mycroft.Units.gridUnit * 2
+
+
+                Button {
+                    id: powerButton
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.alignment: Qt.AlignLeft
 
-                    spacing: Mycroft.Units.gridUnit
+                    background: Rectangle {
+                        Kirigami.Theme.inherit: false
+                        Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                        color: Kirigami.Theme.backgroundColor
+                        radius: 8
+                    }
 
-                    Kirigami.Icon {
-                        source: "media-optical-symbolic"
-                        width: Kirigami.Units.iconSizes.large
-                        height: Kirigami.Units.iconSizes.large
+                    contentItem: Item { 
+                        Kirigami.Icon {
+                            width: parent.width > parent.height ? parent.height / 2 : parent.width / 3
+                            height: width
+                            anchors.centerIn: parent
+                            source: "system-shutdown-symbolic"
 
-                        ColorOverlay {
-                            id: selectMediaButtonOverlayColor
-                            anchors.fill: parent
-                            source: parent
-                            color: Kirigami.Theme.textColor
+                            ColorOverlay {
+                                id: powerButtonOverlayColor
+                                anchors.fill: parent
+                                source: parent
+                                color: Kirigami.Theme.textColor
+                            }
                         }
                     }
 
-                    Label {
-                        text: qsTr("Select Media")
-                        color: Kirigami.Theme.textColor
+                    onClicked: {
+                        console.log(device.state)
+                        if(device.state == "off") {
+                            Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.device.turn_on", { "device_id": device.id })
+                        }
+                        else {
+                            Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.device.turn_off", { "device_id": device.id })
+                        }
+                    }
+
+                    onPressed: {
+                        powerButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
+                    }
+                    onReleased: {
+                        powerButtonOverlayColor.color = Kirigami.Theme.textColor
+                    }
+                }
+
+                Button {
+                    id: previousButton
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: device.state == "playing" || device.state == "paused"
+                    enabled: device.state == "playing" || device.state == "paused"
+
+                    background: Rectangle {
+                        Kirigami.Theme.inherit: false
+                        Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                        color: Kirigami.Theme.backgroundColor
+                        radius: 8
+                    }
+
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            width: parent.width > parent.height ? parent.height / 2 : parent.width / 3
+                            height: width
+                            anchors.centerIn: parent
+                            source: "media-skip-backward-symbolic"
+
+                            ColorOverlay {
+                                id: previousButtonOverlayColor
+                                anchors.fill: parent
+                                source: parent
+                                color: Kirigami.Theme.textColor
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", { 
+                            "device_id": device.id,
+                            "function": "media_previous_track"
+                        })
+                    }
+                    onPressed: {
+                        previousButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
+                    }
+                    onReleased: {
+                        previousButtonOverlayColor.color = Kirigami.Theme.textColor
+                    }
+                }
+
+                Button {
+                    id: playButton
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: device.state == "playing" || device.state == "paused"  
+                    enabled: device.state == "playing" || device.state == "paused"          
+
+                    background: Rectangle {
+                        Kirigami.Theme.inherit: false
+                        Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                        color: Kirigami.Theme.backgroundColor
+                        radius: 8
+                    }
+
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            width: parent.width > parent.height ? parent.height / 2 : parent.width / 3
+                            height: width
+                            anchors.centerIn: parent
+                            source: device.state == "playing" ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
+
+                            ColorOverlay {
+                                id: playButtonOverlayColor
+                                anchors.fill: parent
+                                source: parent
+                                color: Kirigami.Theme.textColor
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        if(device.state == "paused") {
+                            Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
+                                "device_id": device.id,
+                                "function_name": "play_media",
+                                "function_args": {}
+                            })
+                        } else if(device.state == "playing") {
+                            Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
+                                "device_id": device.id,
+                                "function_name": "media_pause",
+                                "function_args": {}
+                            })
+                        }
+                    }
+                    onPressed: {
+                        playButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
+                    }
+                    onReleased: {
+                        playButtonOverlayColor.color = Kirigami.Theme.textColor
+                    }
+                }
+
+                Button {
+                    id: nextButton
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: device.state == "playing" || device.state == "paused"
+                    enabled: device.state == "playing" || device.state == "paused"      
+
+                    background: Rectangle {
+                        Kirigami.Theme.inherit: false
+                        Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                        color: Kirigami.Theme.backgroundColor
+                        radius: 8
+                    }
+
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            width: parent.width > parent.height ? parent.height / 2 : parent.width / 3
+                            height: width
+                            anchors.centerIn: parent
+                            source: "media-skip-forward-symbolic"
+
+                            ColorOverlay {
+                                id: nextButtonOverlayColor
+                                anchors.fill: parent
+                                source: parent
+                                color: Kirigami.Theme.textColor
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", { 
+                            "device_id": device.id,
+                            "function": "media_next_track"
+                        })
+                    }
+                    onPressed: {
+                        nextButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
+                    }
+                    onReleased: {
+                        nextButtonOverlayColor.color = Kirigami.Theme.textColor
                     }
                 }
             }
 
-            onPressed: {
-                selectMediaButtonAnimation.running = true
+            RowLayout {
+                id: volumeSliderRow
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumHeight: Mycroft.Units.gridUnit * 2
+                Layout.maximumHeight: Mycroft.Units.gridUnit * 5
+
+                Button {
+                    id: selectMediaButton
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    background: Rectangle {
+                        id: selectMediaButtonBackground
+                        Kirigami.Theme.inherit: false
+                        Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                        color: Kirigami.Theme.backgroundColor
+                        radius: Kirigami.Units.gridUnit
+                    }
+
+                    SequentialAnimation {
+                        id: selectMediaButtonAnimation
+
+                        PropertyAnimation {
+                            target: selectMediaButtonBackground
+                            property: "color"
+                            from: Kirigami.Theme.backgroundColor
+                            to: Kirigami.Theme.highlightColor
+                            duration: 100
+                        }
+
+                        PropertyAnimation {
+                            target: selectMediaButtonBackground
+                            property: "color"
+                            from: Kirigami.Theme.highlightColor
+                            to: Kirigami.Theme.backgroundColor
+                            duration: 100
+                        }
+                    }
+
+                    contentItem: Item {
+                        RowLayout {
+                            id: selectMediaButtonLayout
+                            anchors.fill: parent
+                            anchors.margins: Mycroft.Units.gridUnit / 2
+                            spacing: Mycroft.Units.gridUnit / 3
+
+                            Kirigami.Icon {
+                                source: "media-optical-symbolic"
+                                Layout.preferredWidth: Kirigami.Units.iconSizes.large
+                                Layout.fillHeight: true
+
+                                ColorOverlay {
+                                    id: selectMediaButtonOverlayColor
+                                    anchors.fill: parent
+                                    source: parent
+                                    color: Kirigami.Theme.textColor
+                                }
+                            }
+
+                            Label {
+                                text: qsTr("Select Media")
+                                color: Kirigami.Theme.textColor
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                horizontalAlignment: Text.AlignLeft
+                                verticalAlignment: Text.AlignVCenter
+                                fontSizeMode: Text.Fit
+                                minimumPixelSize: 10
+                                font.pixelSize: Mycroft.Units.gridUnit
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        deviceControlsLoader.openSheet(device)
+                    }
+
+                    onPressed: {
+                        selectMediaButtonAnimation.running = true
+                    }
+                }
+
+                Button {
+                    id: lowerVolumeButton
+                    Layout.preferredWidth: Mycroft.Units.gridUnit * 3
+                    Layout.fillHeight: true
+                    visible: device.state == "playing" || device.state == "paused" ? 1 : 0
+                    enabled: device.state == "playing" || device.state == "paused" ? 1 : 0   
+
+                    background: Rectangle {
+                        Kirigami.Theme.inherit: false
+                        Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                        color: Kirigami.Theme.backgroundColor
+                        radius: 8
+                    }
+
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            anchors.fill: parent
+                            anchors.margins: Mycroft.Units.gridUnit / 2
+                            source: "audio-volume-low"
+
+                            ColorOverlay {
+                                id: lowerVolumeButtonOverlayColor
+                                anchors.fill: parent
+                                source: parent
+                                color: Kirigami.Theme.textColor
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
+                            "device_id": device.id,
+                            "function_name": "volume_down",
+                            "function_args": {}
+                        })
+                    }
+                    onPressed: {
+                        lowerVolumeButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
+                    }
+                    onReleased: {
+                        lowerVolumeButtonOverlayColor.color = Kirigami.Theme.textColor
+                    }
+                }
+
+                Button {
+                    id: higherVolumeButton
+                    Layout.preferredWidth: Mycroft.Units.gridUnit * 3
+                    Layout.fillHeight: true
+                    visible: device.state == "playing" || device.state == "paused" ? 1 : 0
+                    enabled: device.state == "playing" || device.state == "paused" ? 1 : 0   
+
+                    background: Rectangle {
+                        Kirigami.Theme.inherit: false
+                        Kirigami.Theme.colorSet: Kirigami.Theme.Button
+                        color: Kirigami.Theme.backgroundColor
+                        radius: 8
+                    }
+
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            anchors.fill: parent
+                            anchors.margins: Mycroft.Units.gridUnit / 2
+                            source: "audio-volume-high"
+
+                            ColorOverlay {
+                                id: higherVolumeButtonOverlayColor
+                                anchors.fill: parent
+                                source: parent
+                                color: Kirigami.Theme.textColor
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
+                            "device_id": device.id,
+                            "function_name": "volume_up",
+                            "function_args": {}
+                        })
+                    }
+                    onPressed: {
+                        higherVolumeButtonOverlayColor.color = Qt.lighter(Kirigami.Theme.highlightColor, 1.5)
+                    }
+                    onReleased: {
+                        higherVolumeButtonOverlayColor.color = Kirigami.Theme.textColor
+                    }
+                }
             }
         }
     }

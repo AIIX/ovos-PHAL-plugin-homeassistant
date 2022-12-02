@@ -9,7 +9,9 @@ from ovos_PHAL_plugin_homeassistant.logic.device import (HomeAssistantSensor,
                                                          HomeAssistantLight,
                                                          HomeAssistantMediaPlayer,
                                                          HomeAssistantVacuum)
-from ovos_PHAL_plugin_homeassistant.logic.utils import map_entity_to_device_type
+from ovos_PHAL_plugin_homeassistant.logic.integration import Integrator
+from ovos_PHAL_plugin_homeassistant.logic.utils import (map_entity_to_device_type, 
+                                                        check_if_device_type_is_group)
 from ovos_config.config import update_mycroft_config
 
 
@@ -25,6 +27,7 @@ class HomeAssistantPlugin(PHALPlugin):
         self.registered_devices = []
         self.bus = bus
         self.gui = GUIInterface(bus=self.bus, skill_id=self.name)
+        self.integrator = Integrator(self.bus, self.gui)
         self.instance_available = False
         self.device_types = {
             "sensor": HomeAssistantSensor,
@@ -53,6 +56,8 @@ class HomeAssistantPlugin(PHALPlugin):
         # GUI EVENTS
         self.bus.on("ovos-PHAL-plugin-homeassistant.home",
                     self.handle_show_dashboard)
+        self.bus.on("ovos-PHAL-plugin-homeassistant.close", 
+                    self.handle_close_dashboard)
         self.bus.on("ovos.phal.plugin.homeassistant.show.device.dashboard",
                     self.handle_show_device_dashboard)
         self.bus.on("ovos.phal.plugin.homeassistant.update.device.dashboard",
@@ -63,6 +68,10 @@ class HomeAssistantPlugin(PHALPlugin):
                     self.setup_configuration)
         self.bus.on("configuration.updated", self.init_configuration)
         self.bus.on("configuration.patch", self.init_configuration)
+        
+        self.bus.emit(Message("ovos.phal.plugin.homeassistant.integration.query_media", {
+            "phrase": "rocketman"
+        }))
 
         self.init_configuration()
 
@@ -132,18 +141,22 @@ class HomeAssistantPlugin(PHALPlugin):
         """ Build the devices from the Home Assistant API """
         for device in self.devices:
             device_type = map_entity_to_device_type(device["entity_id"])
+            device_type_is_group = check_if_device_type_is_group(device.get("attributes", {}))
             if device_type is not None:
-                device_id = device["entity_id"]
-                device_name = device.get("attributes", {}).get(
-                    "friendly_name", device_id)
-                device_icon = f"mdi:{device_type}"
-                device_state = device.get("state", None)
-                device_attributes = device.get("attributes", {})
-                if device_type in self.device_types:
-                    self.registered_devices.append(self.device_types[device_type](
-                        self.connector, device_id, device_icon, device_name, device_state, device_attributes))
+                if not device_type_is_group:
+                    device_id = device["entity_id"]
+                    device_name = device.get("attributes", {}).get(
+                        "friendly_name", device_id)
+                    device_icon = f"mdi:{device_type}"
+                    device_state = device.get("state", None)
+                    device_attributes = device.get("attributes", {})
+                    if device_type in self.device_types:
+                        self.registered_devices.append(self.device_types[device_type](
+                            self.connector, device_id, device_icon, device_name, device_state, device_attributes))
+                    else:
+                        LOG.warning(f"Device type {device_type} not supported")
                 else:
-                    LOG.warning(f"Device type {device_type} not supported")
+                    LOG.warning(f"Device type {device_type} is a group, not supported currently")
 
     def build_display_dashboard_model(self):
         """ Build the dashboard model """
@@ -304,6 +317,14 @@ class HomeAssistantPlugin(PHALPlugin):
                                 "dash_type": "main"})
             page = join(dirname(__file__), "ui", "Dashboard.qml")
             self.gui.show_page(page, override_idle=True)
+            
+    def handle_close_dashboard(self, message):
+        """ Handle the close dashboard message
+
+            Args:
+                message (Message): The message object
+        """
+        self.gui.release()
 
     def handle_show_device_dashboard(self, message):
         """ Handle the show device dashboard message 
