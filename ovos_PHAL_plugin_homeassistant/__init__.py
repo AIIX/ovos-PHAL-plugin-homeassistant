@@ -3,7 +3,7 @@ from ovos_utils.log import LOG
 from mycroft_bus_client.message import Message
 from ovos_plugin_manager.phal import PHALPlugin
 from ovos_utils.gui import GUIInterface
-from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantConnector
+from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantRESTConnector, HomeAssistantWSConnector
 from ovos_PHAL_plugin_homeassistant.logic.device import (HomeAssistantSensor,
                                                          HomeAssistantBinarySensor,
                                                          HomeAssistantLight,
@@ -24,6 +24,7 @@ class HomeAssistantPlugin(PHALPlugin):
                 config (dict): The plugin configuration
         """
         super().__init__(bus=bus, name="ovos-PHAL-plugin-homeassistant", config=config)
+        self.connector = None
         self.registered_devices = []
         self.bus = bus
         self.gui = GUIInterface(bus=self.bus, skill_id=self.name)
@@ -87,7 +88,10 @@ class HomeAssistantPlugin(PHALPlugin):
                 bool: True if the connection is valid, False otherwise
         """
         try:
-            validator = HomeAssistantConnector(host, api_key)
+            if self.config.get('use_websocket'):
+                validator = HomeAssistantWSConnector(host, api_key)
+            else:
+                validator = HomeAssistantRESTConnector(host, api_key)
             validator.get_all_devices()
             return True
         except Exception as e:
@@ -126,8 +130,12 @@ class HomeAssistantPlugin(PHALPlugin):
         configuration_api_key = self.config.get("api_key", "")
         if configuration_host != "" and configuration_api_key != "":
             self.instance_available = True
-            self.connector = HomeAssistantConnector(
-                configuration_host, configuration_api_key)
+            if self.config.get('use_websocket'):
+                self.connector = HomeAssistantWSConnector(configuration_host,
+                                                          configuration_api_key)
+            else:
+                self.connector = HomeAssistantRESTConnector(
+                    configuration_host, configuration_api_key)
             self.devices = self.connector.get_all_devices()
             self.registered_devices = []
             self.build_devices()
