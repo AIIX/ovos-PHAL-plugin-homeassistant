@@ -8,7 +8,7 @@ from ovos_PHAL_plugin_homeassistant.logic.device import (HomeAssistantSensor,
                                                          HomeAssistantBinarySensor,
                                                          HomeAssistantLight,
                                                          HomeAssistantMediaPlayer,
-                                                         HomeAssistantVacuum)
+                                                         HomeAssistantVacuum, HomeAssistantSwitch, HomeAssistantClimate)
 from ovos_PHAL_plugin_homeassistant.logic.integration import Integrator
 from ovos_PHAL_plugin_homeassistant.logic.utils import (map_entity_to_device_type, 
                                                         check_if_device_type_is_group)
@@ -35,7 +35,9 @@ class HomeAssistantPlugin(PHALPlugin):
             "binary_sensor": HomeAssistantBinarySensor,
             "light": HomeAssistantLight,
             "media_player": HomeAssistantMediaPlayer,
-            "vacuum": HomeAssistantVacuum
+            "vacuum": HomeAssistantVacuum,
+            "switch": HomeAssistantSwitch,
+            "climate": HomeAssistantClimate
         }
 
         # BUS API FOR HOME ASSISTANT
