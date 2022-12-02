@@ -4,3 +4,4 @@ ovos-config~=0.0.5
 mycroft-messagebus-client
 youtube-search
 pytube
+hass-client~=0.1
