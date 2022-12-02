@@ -1,7 +1,7 @@
 import requests
 import json
 import sys
-
+from ovos_utils.log import LOG
 
 class HomeAssistantConnector:
     def __init__(self, host, api_key):
@@ -138,7 +138,9 @@ class HomeAssistantConnector:
         if arguments:
             for key, value in arguments.items():
                 payload[key] = value
+
         response = requests.post(
             url, data=json.dumps(payload), headers=self.headers)
+        
         if response.status_code == 200:
             return json.loads(response.text)

@@ -68,6 +68,10 @@ Mycroft.Delegate {
                     dashboardSwipeView.currentIndex = 1
                 }
                 break
+            case "ovos.phal.plugin.homeassistant.integration.query_media.result":
+                deviceControlsLoader.mediaModel = data.results
+                console.log(JSON.stringify(data.results))
+                break
         }
     }
 
@@ -143,6 +147,35 @@ Mycroft.Delegate {
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
+            }
+        }
+
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: topBarSeparator.top
+            width: Mycroft.Units.gridUnit * 4
+            color: Kirigami.Theme.highlightColor
+
+            Kirigami.Icon {
+                id: closeIcon
+                anchors.centerIn: parent
+                width: Mycroft.Units.gridUnit * 1.8
+                height: Mycroft.Units.gridUnit * 1.8
+                source: "window-close-symbolic"
+
+                ColorOverlay {
+                    anchors.fill: parent
+                    source: parent
+                    color: Kirigami.Theme.textColor
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    Mycroft.MycroftController.sendRequest("ovos-PHAL-plugin-homeassistant.close", {})
+                }
             }
         }
 
@@ -258,6 +291,7 @@ Mycroft.Delegate {
                 maximumColumns: horizontalMode ? 3 : 2
                 cellHeight: Mycroft.Units.gridUnits * 5
                 delegate: Delegates.DashboardDelegate {}
+                clip: true
                 ScrollBar.vertical: ScrollBar{
                     width: Mycroft.Units.gridUnit * 1.5
                     policy: dashboardGridView.count >= 6 ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
@@ -284,7 +318,7 @@ Mycroft.Delegate {
                     anchors.fill: parent
                     columns: horizontalMode ? (width > 800 ? 3 : 2) : (width > 600 ? 2 : 1)
                     property int cellWidth: horizontalMode ? (width / columns - Kirigami.Units.largeSpacing * 2) : (width / columns - Kirigami.Units.largeSpacing * 2)
-                    property int cellHeight: cellWidth
+                    property int cellHeight: cellWidth - Kirigami.Units.largeSpacing * 3
                     columnSpacing: Kirigami.Units.largeSpacing
                     rowSpacing: Kirigami.Units.largeSpacing
 
@@ -548,6 +582,27 @@ Mycroft.Delegate {
                         } 
                     }
                 }
+            }
+        }
+    }
+
+    ItemDelegate {
+        anchors.fill: parent
+        visible: deviceControlsLoader.opened
+        enabled: deviceControlsLoader.opened
+
+        background: Rectangle {
+            color: Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g, Kirigami.Theme.backgroundColor.b, 0.9)
+        }
+        
+        DeviceControlsLoader {
+            id: deviceControlsLoader
+            horizontalMode: dashboardRoot.horizontalMode
+        }
+
+        onClicked: {
+            if(deviceControlsLoader.opened) {
+                deviceControlsLoader.closeSheet()
             }
         }
     }
