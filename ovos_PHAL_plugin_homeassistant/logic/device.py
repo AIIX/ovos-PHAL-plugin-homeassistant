@@ -2,6 +2,8 @@ import requests
 import json
 from ovos_utils.log import LOG
 
+from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantRESTConnector
+
 
 class HomeAssistantDevice:
     def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
@@ -151,6 +153,7 @@ class HomeAssistantDevice:
     def poll(self):
         """ Poll the device. """
         full_state_json = self.connector.get_device_state(self.device_id)
+        LOG.debug(full_state_json)
         self.device_state = full_state_json.get("state", "unknown")
         self.device_attributes = full_state_json.get("attributes", {})
 
