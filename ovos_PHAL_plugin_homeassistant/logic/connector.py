@@ -251,6 +251,9 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
 class HomeAssistantWSConnector(HomeAssistantConnector):
     def __init__(self, host, api_key):
         super().__init__(host, api_key)
+        if self.host.startswith('http'):
+            self.host.replace('http', 'ws', 1)
+
         import asyncio
         from hass_client.client import HomeAssistantClient
         self._loop = asyncio.get_event_loop()
