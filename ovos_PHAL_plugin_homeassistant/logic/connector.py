@@ -264,8 +264,16 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
 
     @staticmethod
     def _device_entry_compat(devices: dict):
+        disabled_devices = list()
         for idx, dev in devices.items():
-            devices[idx].setdefault('type', dev['entity_id'].split('.', 1)[0])
+            if dev.get('disabled_by'):
+                LOG.debug(f'Ignoring {dev.get("entity_id")} disabled by '
+                          f'{dev.get("disabled_by")}')
+                disabled_devices.append(idx)
+            else:
+                devices[idx].setdefault('type', dev['entity_id'].split('.', 1)[0])
+        for idx in disabled_devices:
+            devices.pop(idx)
 
     def get_all_devices(self) -> list:
         devices = self.client.entity_registry
