@@ -1,3 +1,4 @@
+import asyncio
 from abc import abstractmethod
 from typing import Optional, List
 
@@ -252,8 +253,9 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         super().__init__(host, api_key)
         import asyncio
         from hass_client.client import HomeAssistantClient
-
-        self.client: HomeAssistantClient = asyncio.run(self.start_client())
+        self._loop = asyncio.get_event_loop()
+        self.client: HomeAssistantClient = self._loop.run_until_complete(
+            self.start_client())
 
     async def start_client(self):
         from hass_client.client import HomeAssistantClient
@@ -304,15 +306,18 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
 
     def turn_on(self, device_id, device_type):
         LOG.debug(f"Turn on {device_id}")
-        self.client.call_service(device_type, 'turn_on',
-                                 {'entity_id': device_id})
+        self._loop.run_until_complete(
+            self.client.call_service(device_type, 'turn_on',
+                                     {'entity_id': device_id}))
 
     def turn_off(self, device_id, device_type):
         LOG.debug(f"Turn off {device_id}")
-        self.client.call_service(device_type, 'turn_off',
-                                 {'entity_id': device_id})
+        self._loop.run_until_complete(
+            self.client.call_service(device_type, 'turn_off',
+                                     {'entity_id': device_id}))
 
     def call_function(self, device_id, device_type, function, arguments=None):
         arguments = arguments or dict()
         arguments['entity_id'] = device_id
-        self.client.call_service(device_type, function, arguments)
+        self._loop.run_until_complete(
+            self.client.call_service(device_type, function, arguments))
