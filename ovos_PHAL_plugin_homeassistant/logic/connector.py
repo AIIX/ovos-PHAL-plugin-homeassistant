@@ -303,10 +303,14 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         return [d for d in devices if d['attributes'].get(attribute) not in value]
 
     def turn_on(self, device_id, device_type):
-        self.client.set_state(device_id, 'on')
+        LOG.debug(f"Turn on {device_id}")
+        self.client.call_service(device_type, 'turn_on',
+                                 {'entity_id': device_id})
 
     def turn_off(self, device_id, device_type):
-        self.client.set_state(device_id, 'off')
+        LOG.debug(f"Turn off {device_id}")
+        self.client.call_service(device_type, 'turn_off',
+                                 {'entity_id': device_id})
 
     def call_function(self, device_id, device_type, function, arguments=None):
         arguments = arguments or dict()
