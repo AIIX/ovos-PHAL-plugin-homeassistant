@@ -260,15 +260,19 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         except RuntimeError:
             asyncio.set_event_loop(asyncio.new_event_loop())
             self._loop = asyncio.get_event_loop()
-        self.client: HomeAssistantClient = self._loop.run_until_complete(
-            self.start_client())
+        self._client: HomeAssistantClient = HomeAssistantClient(self.host,
+                                                                self.api_key)
+        self._loop.run_until_complete(self.start_client())
+
+    @property
+    def client(self):
+        if not self._client.connected:
+            LOG.error("Client not connected, re-initializing")
+            self._loop.run_until_complete(self.start_client())
+        return self._client
 
     async def start_client(self):
-        from hass_client.client import HomeAssistantClient
-
-        client = HomeAssistantClient(self.host, self.api_key)
-        await client.connect()
-        return client
+        await self._client.connect()
 
     @staticmethod
     def _device_entry_compat(devices: dict):
