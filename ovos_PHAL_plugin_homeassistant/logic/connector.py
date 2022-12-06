@@ -1,4 +1,3 @@
-import asyncio
 from abc import abstractmethod
 from typing import Optional, List
 
@@ -256,7 +255,10 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
 
         import asyncio
         from hass_client.client import HomeAssistantClient
-        self._loop = asyncio.get_event_loop()
+        try:
+            self._loop = asyncio.get_event_loop()
+        except RuntimeError:
+            self._loop = asyncio.new_event_loop()
         self.client: HomeAssistantClient = self._loop.run_until_complete(
             self.start_client())
 
