@@ -258,7 +258,8 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         try:
             self._loop = asyncio.get_event_loop()
         except RuntimeError:
-            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            self._loop = asyncio.get_event_loop()
         self.client: HomeAssistantClient = self._loop.run_until_complete(
             self.start_client())
 
