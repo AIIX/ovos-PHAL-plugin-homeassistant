@@ -4,6 +4,9 @@ from typing import Optional, List
 import requests
 import json
 import sys
+import asyncio
+
+from hass_client.client import HomeAssistantClient
 from ovos_utils.log import LOG
 
 
@@ -252,16 +255,12 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         super().__init__(host, api_key)
         if self.host.startswith('http'):
             self.host.replace('http', 'ws', 1)
-
-        import asyncio
-        from hass_client.client import HomeAssistantClient
         try:
             self._loop = asyncio.get_event_loop()
         except RuntimeError:
             asyncio.set_event_loop(asyncio.new_event_loop())
             self._loop = asyncio.get_event_loop()
-        self._client: HomeAssistantClient = HomeAssistantClient(self.host,
-                                                                self.api_key)
+        self._client: HomeAssistantClient = None
         self._loop.run_until_complete(self.start_client())
 
     @property
@@ -272,6 +271,8 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         return self._client
 
     async def start_client(self):
+        self._client = self._client or HomeAssistantClient(self.host,
+                                                           self.api_key)
         await self._client.connect()
 
     @staticmethod
