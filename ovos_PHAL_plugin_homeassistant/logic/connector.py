@@ -272,8 +272,8 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         self._device_entry_compat(devices)
         return list(devices.values())
 
-    def get_device_state(self, entity_id: str):
-        return self.client.get_state(entity_id)
+    def get_device_state(self, entity_id: str) -> dict:
+        return self.client.get_state(entity_id, attribute="")
 
     def set_device_state(self, entity_id: str, state: str, attributes: Optional[dict] = None):
         self.client.set_state(entity_id, state, attributes)
