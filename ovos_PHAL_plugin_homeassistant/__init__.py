@@ -3,12 +3,12 @@ from ovos_utils.log import LOG
 from mycroft_bus_client.message import Message
 from ovos_plugin_manager.phal import PHALPlugin
 from ovos_utils.gui import GUIInterface
-from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantConnector
+from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantRESTConnector, HomeAssistantWSConnector
 from ovos_PHAL_plugin_homeassistant.logic.device import (HomeAssistantSensor,
                                                          HomeAssistantBinarySensor,
                                                          HomeAssistantLight,
                                                          HomeAssistantMediaPlayer,
-                                                         HomeAssistantVacuum)
+                                                         HomeAssistantVacuum, HomeAssistantSwitch, HomeAssistantClimate)
 from ovos_PHAL_plugin_homeassistant.logic.integration import Integrator
 from ovos_PHAL_plugin_homeassistant.logic.utils import (map_entity_to_device_type, 
                                                         check_if_device_type_is_group)
@@ -24,6 +24,7 @@ class HomeAssistantPlugin(PHALPlugin):
                 config (dict): The plugin configuration
         """
         super().__init__(bus=bus, name="ovos-PHAL-plugin-homeassistant", config=config)
+        self.connector = None
         self.registered_devices = []
         self.bus = bus
         self.gui = GUIInterface(bus=self.bus, skill_id=self.name)
@@ -34,7 +35,9 @@ class HomeAssistantPlugin(PHALPlugin):
             "binary_sensor": HomeAssistantBinarySensor,
             "light": HomeAssistantLight,
             "media_player": HomeAssistantMediaPlayer,
-            "vacuum": HomeAssistantVacuum
+            "vacuum": HomeAssistantVacuum,
+            "switch": HomeAssistantSwitch,
+            "climate": HomeAssistantClimate
         }
 
         # BUS API FOR HOME ASSISTANT
@@ -87,7 +90,10 @@ class HomeAssistantPlugin(PHALPlugin):
                 bool: True if the connection is valid, False otherwise
         """
         try:
-            validator = HomeAssistantConnector(host, api_key)
+            if self.config.get('use_websocket'):
+                validator = HomeAssistantWSConnector(host, api_key)
+            else:
+                validator = HomeAssistantRESTConnector(host, api_key)
             validator.get_all_devices()
             return True
         except Exception as e:
@@ -126,8 +132,12 @@ class HomeAssistantPlugin(PHALPlugin):
         configuration_api_key = self.config.get("api_key", "")
         if configuration_host != "" and configuration_api_key != "":
             self.instance_available = True
-            self.connector = HomeAssistantConnector(
-                configuration_host, configuration_api_key)
+            if self.config.get('use_websocket'):
+                self.connector = HomeAssistantWSConnector(configuration_host,
+                                                          configuration_api_key)
+            else:
+                self.connector = HomeAssistantRESTConnector(
+                    configuration_host, configuration_api_key)
             self.devices = self.connector.get_all_devices()
             self.registered_devices = []
             self.build_devices()
@@ -149,10 +159,12 @@ class HomeAssistantPlugin(PHALPlugin):
                         "friendly_name", device_id)
                     device_icon = f"mdi:{device_type}"
                     device_state = device.get("state", None)
+                    device_area = device.get("area_id", None)
                     device_attributes = device.get("attributes", {})
                     if device_type in self.device_types:
                         self.registered_devices.append(self.device_types[device_type](
-                            self.connector, device_id, device_icon, device_name, device_state, device_attributes))
+                            self.connector, device_id, device_icon, device_name,
+                            device_state, device_attributes, device_area))
                     else:
                         LOG.warning(f"Device type {device_type} not supported")
                 else:

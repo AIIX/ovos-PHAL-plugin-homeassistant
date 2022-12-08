@@ -2,9 +2,11 @@ import requests
 import json
 from ovos_utils.log import LOG
 
+from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantRESTConnector
+
 
 class HomeAssistantDevice:
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes, device_area = None):
         """ Initialize the device.
 
         Args:
@@ -14,6 +16,7 @@ class HomeAssistantDevice:
             device_name (str): The name of the device.
             device_state (str): The state of the device.
             device_attributes (dict): The attributes of the device.
+            device_area (str): Name of area device is in (None if no area)
         """
         self.connector = connector
         self.device_id = device_id
@@ -21,6 +24,7 @@ class HomeAssistantDevice:
         self.device_name = device_name
         self.device_state = device_state
         self.device_attributes = device_attributes
+        self.device_area = device_area
         self.has_device_class = False
         self.device_class = None
         self.device_type = self.device_id.split(".")[0]
@@ -151,8 +155,15 @@ class HomeAssistantDevice:
     def poll(self):
         """ Poll the device. """
         full_state_json = self.connector.get_device_state(self.device_id)
-        self.device_state = full_state_json.get("state", "unknown")
-        self.device_attributes = full_state_json.get("attributes", {})
+        # LOG.debug(full_state_json)
+        if full_state_json == 'unavailable':
+            LOG.warning(f"State unavailable for device: {self.device_id}")
+        elif not isinstance(full_state_json, dict):
+            LOG.error(f'({self.device_name}) Expected dict state but got: '
+                      f'{full_state_json}')
+        else:
+            self.device_state = full_state_json.get("state", "unknown")
+            self.device_attributes = full_state_json.get("attributes", {})
 
     def get_device_display_model(self):
         """ Get the display model of the device. """
@@ -168,9 +179,11 @@ class HomeAssistantDevice:
 
 
 class HomeAssistantLight(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
     def get_brightness(self):
         """ Get the brightness of the light. """
@@ -274,15 +287,19 @@ class HomeAssistantLight(HomeAssistantDevice):
 
 
 class HomeAssistantSwitch(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
 
 class HomeAssistantSensor(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
     def get_device_class(self):
         """ Get the device class of the sensor. """
@@ -310,9 +327,11 @@ class HomeAssistantSensor(HomeAssistantDevice):
 
 
 class HomeAssistantBinarySensor(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
     def get_device_class(self):
         """ Get the device class of the binary sensor. """
@@ -320,9 +339,11 @@ class HomeAssistantBinarySensor(HomeAssistantDevice):
 
 
 class HomeAssistantCover(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
     def open(self):
         """ Open the cover. """
@@ -366,9 +387,11 @@ class HomeAssistantCover(HomeAssistantDevice):
 
 
 class HomeAssistantMediaPlayer(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
     def get_media_title(self):
         """ Get the media title of the media player. """
@@ -436,9 +459,11 @@ class HomeAssistantMediaPlayer(HomeAssistantDevice):
 
 
 class HomeAssistantClimate(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
     def set_temperature(self, temperature):
         """ Set the temperature of the climate device.
@@ -577,9 +602,11 @@ class HomeAssistantClimate(HomeAssistantDevice):
 
 
 class HomeAssistantVacuum(HomeAssistantDevice):
-    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes):
+    def __init__(self, connector, device_id, device_icon, device_name,
+                 device_state, device_attributes, device_area=None):
         super().__init__(connector, device_id, device_icon,
-                         device_name, device_state, device_attributes)
+                         device_name, device_state, device_attributes,
+                         device_area)
 
     def start(self):
         """ Start the vacuum. """
