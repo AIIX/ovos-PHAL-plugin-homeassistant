@@ -294,7 +294,13 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         return list(devices.values())
 
     def get_device_state(self, entity_id: str) -> dict:
-        return self.client.get_state(entity_id, attribute="")
+        message = {'type': 'get_states'}
+        states = self._loop.run_until_complete(self.client.send_command(message))
+        if states != self.client.states:
+            LOG.warning(f"client states outdated!")
+        for state in states:
+            if state['entity_id'] == entity_id:
+                return state
 
     def set_device_state(self, entity_id: str, state: str, attributes: Optional[dict] = None):
         self.client.set_state(entity_id, state, attributes)
