@@ -383,7 +383,9 @@ class HomeAssistantPlugin(PHALPlugin):
             Args:
                 message (Message): The message object
         """
-        display_list_model = {"items": self.build_display_list_model()}
+        display_list_model = []
+        for device in self.registered_devices:
+            display_list_model.append(device.get_device_display_model())
         self.bus.emit(message.response(data=display_list_model))
 
 # GUI INTERFACE HANDLERS
