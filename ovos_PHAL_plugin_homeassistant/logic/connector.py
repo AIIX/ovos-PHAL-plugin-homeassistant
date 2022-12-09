@@ -122,7 +122,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
 
     def get_all_devices(self):
         """ Get all devices from home assistant. """
-        url = self.host + ":8123/api/states"
+        url = self.host + "/api/states"
         response = requests.get(url, headers=self.headers)
         if response.status_code == 200:
             return json.loads(response.text)
@@ -132,7 +132,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
 
     def get_device_state(self, entity_id):
         """ Get the state of a device. """
-        url = self.host + ":8123/api/states/" + entity_id
+        url = self.host + "/api/states/" + entity_id
         response = requests.get(url, headers=self.headers)
         if response.status_code == 200:
             return json.loads(response.text)
@@ -148,7 +148,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
             state (str): The state to set.
             attributes (dict): The attributes to set. 
         """
-        url = self.host + ":8123/api/states/" + entity_id
+        url = self.host + "/api/states/" + entity_id
         payload = {'state': state, 'attributes': attributes}
         response = requests.post(
             url, data=json.dumps(payload), headers=self.headers)
@@ -207,7 +207,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
             device_id (str): The id of the device.
             device_type (str): The type of the device.
         """
-        url = self.host + ":8123/api/services/" + device_type + "/turn_on"
+        url = self.host + "/api/services/" + device_type + "/turn_on"
         payload = {'entity_id': device_id}
         response = requests.post(
             url, data=json.dumps(payload), headers=self.headers)
@@ -221,7 +221,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
             device_id (str): The id of the device.
             device_type (str): The type of the device.
         """
-        url = self.host + ":8123/api/services/" + device_type + "/turn_off"
+        url = self.host + "/api/services/" + device_type + "/turn_off"
         payload = {'entity_id': device_id}
         response = requests.post(
             url, data=json.dumps(payload), headers=self.headers)
@@ -237,7 +237,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
             function (str): The function to call.
             arguments (dict): The arguments to pass to the function.
         """
-        url = self.host + ":8123/api/services/" + device_type + "/" + function
+        url = self.host + "/api/services/" + device_type + "/" + function
         payload = {'entity_id': device_id}
         if arguments:
             for key, value in arguments.items():
@@ -245,7 +245,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
 
         response = requests.post(
             url, data=json.dumps(payload), headers=self.headers)
-        
+
         if response.status_code == 200:
             return json.loads(response.text)
 
@@ -284,20 +284,21 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
                           f'{dev.get("disabled_by")}')
                 disabled_devices.append(idx)
             else:
-                devices[idx].setdefault('type', dev['entity_id'].split('.', 1)[0])
+                devices[idx].setdefault(
+                    'type', dev['entity_id'].split('.', 1)[0])
         for idx in disabled_devices:
             devices.pop(idx)
 
     def get_all_devices(self) -> list:
         devices = self.client.entity_registry
         self._device_entry_compat(devices)
-        return list(devices.values())
+        devices_with_area = self.assign_group_for_devices(devices)
+        return list(devices_with_area.values())
 
     def get_device_state(self, entity_id: str) -> dict:
         message = {'type': 'get_states'}
-        states = self._loop.run_until_complete(self.client.send_command(message))
-        if states != self.client.states:
-            LOG.warning(f"client states outdated!")
+        states = self._loop.run_until_complete(
+            self.client.send_command(message))
         for state in states:
             if state['entity_id'] == entity_id:
                 return state
@@ -338,3 +339,15 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         arguments['entity_id'] = device_id
         self._loop.run_until_complete(
             self.client.call_service(device_type, function, arguments))
+
+    def assign_group_for_devices(self, devices):
+        devices_from_registry = self._loop.run_until_complete(
+            self.client.send_command({'type': 'config/device_registry/list'}))
+
+        for device_item in devices_from_registry:
+            for device in devices.values():
+                if device['device_id'] == device_item['id']:
+                    device['area_id'] = device_item['area_id']
+                    break
+
+        return devices

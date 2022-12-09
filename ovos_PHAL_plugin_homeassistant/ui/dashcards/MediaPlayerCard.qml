@@ -167,7 +167,8 @@ Control {
                     onClicked: {
                         Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", { 
                             "device_id": device.id,
-                            "function": "media_previous_track"
+                            "function_name": "media_previous_track",
+                            "function_args": {}
                         })
                     }
                     onPressed: {
