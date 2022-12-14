@@ -8,11 +8,13 @@ from ovos_PHAL_plugin_homeassistant.logic.device import (HomeAssistantSensor,
                                                          HomeAssistantBinarySensor,
                                                          HomeAssistantLight,
                                                          HomeAssistantMediaPlayer,
-                                                         HomeAssistantVacuum, HomeAssistantSwitch, HomeAssistantClimate)
+                                                         HomeAssistantVacuum, HomeAssistantSwitch,
+                                                         HomeAssistantClimate, HomeAssistantCamera)
 from ovos_PHAL_plugin_homeassistant.logic.integration import Integrator
-from ovos_PHAL_plugin_homeassistant.logic.utils import (map_entity_to_device_type, 
+from ovos_PHAL_plugin_homeassistant.logic.utils import (map_entity_to_device_type,
                                                         check_if_device_type_is_group)
 from ovos_config.config import update_mycroft_config
+from time import sleep
 
 
 class HomeAssistantPlugin(PHALPlugin):
@@ -37,7 +39,8 @@ class HomeAssistantPlugin(PHALPlugin):
             "media_player": HomeAssistantMediaPlayer,
             "vacuum": HomeAssistantVacuum,
             "switch": HomeAssistantSwitch,
-            "climate": HomeAssistantClimate
+            "climate": HomeAssistantClimate,
+            "camera": HomeAssistantCamera
         }
 
         # BUS API FOR HOME ASSISTANT
@@ -59,22 +62,24 @@ class HomeAssistantPlugin(PHALPlugin):
         # GUI EVENTS
         self.bus.on("ovos-PHAL-plugin-homeassistant.home",
                     self.handle_show_dashboard)
-        self.bus.on("ovos-PHAL-plugin-homeassistant.close", 
+        self.bus.on("ovos-PHAL-plugin-homeassistant.close",
                     self.handle_close_dashboard)
         self.bus.on("ovos.phal.plugin.homeassistant.show.device.dashboard",
                     self.handle_show_device_dashboard)
+        self.bus.on("ovos.phal.plugin.homeassistant.show.area.dashboard",
+                    self.handle_show_area_dashboard)
         self.bus.on("ovos.phal.plugin.homeassistant.update.device.dashboard",
                     self.handle_update_device_dashboard)
+        self.bus.on("ovos.phal.plugin.homeassistant.update.area.dashboard",
+                    self.handle_update_area_dashboard)
+        self.bus.on("ovos.phal.plugin.homeassistant.set.group.display.settings",
+                    self.handle_set_group_display_settings)
 
         # LISTEN CONFIG CHANGES
         self.bus.on("ovos.phal.plugin.homeassistant.setup.instance",
                     self.setup_configuration)
         self.bus.on("configuration.updated", self.init_configuration)
         self.bus.on("configuration.patch", self.init_configuration)
-        
-        self.bus.emit(Message("ovos.phal.plugin.homeassistant.integration.query_media", {
-            "phrase": "rocketman"
-        }))
 
         self.init_configuration()
 
@@ -91,9 +96,11 @@ class HomeAssistantPlugin(PHALPlugin):
         """
         try:
             if self.config.get('use_websocket'):
+                LOG.info("Using websocket connection")
                 validator = HomeAssistantWSConnector(host, api_key)
             else:
                 validator = HomeAssistantRESTConnector(host, api_key)
+
             validator.get_all_devices()
             return True
         except Exception as e:
@@ -107,8 +114,20 @@ class HomeAssistantPlugin(PHALPlugin):
                 message (Message): The message object
         """
         host = message.data.get("url", "")
-        key = message.data.get("api_key", "")
+        key = message.data.get("api_key", "")            
+
         if host and key:
+            if host.startswith("ws") or host.startswith("wss"):
+                config_patch = {
+                        "PHAL": {
+                            "ovos-PHAL-plugin-homeassistant": {
+                                "use_websocket": True
+                            }
+                        }
+                }
+                update_mycroft_config(config=config_patch, bus=self.bus)
+                sleep(2) # wait for config to be updated
+
             if self.validate_instance_connection(host, key):
                 self.config["host"] = host
                 self.config["api_key"] = key
@@ -130,6 +149,9 @@ class HomeAssistantPlugin(PHALPlugin):
         """ Initialize instance configuration """
         configuration_host = self.config.get("host", "")
         configuration_api_key = self.config.get("api_key", "")
+        if not self.config.get("use_group_display"):
+            self.config["use_group_display"] = False
+
         if configuration_host != "" and configuration_api_key != "":
             self.instance_available = True
             if self.config.get('use_websocket'):
@@ -141,6 +163,8 @@ class HomeAssistantPlugin(PHALPlugin):
             self.devices = self.connector.get_all_devices()
             self.registered_devices = []
             self.build_devices()
+            self.gui["use_websocket"] = self.config.get("use_websocket", False)
+            self.gui["instanceAvailable"] = True
             self.bus.emit(Message("ovos.phal.plugin.homeassistant.ready"))
         else:
             self.instance_available = False
@@ -151,7 +175,8 @@ class HomeAssistantPlugin(PHALPlugin):
         """ Build the devices from the Home Assistant API """
         for device in self.devices:
             device_type = map_entity_to_device_type(device["entity_id"])
-            device_type_is_group = check_if_device_type_is_group(device.get("attributes", {}))
+            device_type_is_group = check_if_device_type_is_group(
+                device.get("attributes", {}))
             if device_type is not None:
                 if not device_type_is_group:
                     device_id = device["entity_id"]
@@ -160,6 +185,8 @@ class HomeAssistantPlugin(PHALPlugin):
                     device_icon = f"mdi:{device_type}"
                     device_state = device.get("state", None)
                     device_area = device.get("area_id", None)
+                    LOG.info(
+                        f"Device added: {device_name} - {device_type} - {device_area}")
                     device_attributes = device.get("attributes", {})
                     if device_type in self.device_types:
                         self.registered_devices.append(self.device_types[device_type](
@@ -168,9 +195,10 @@ class HomeAssistantPlugin(PHALPlugin):
                     else:
                         LOG.warning(f"Device type {device_type} not supported")
                 else:
-                    LOG.warning(f"Device type {device_type} is a group, not supported currently")
+                    LOG.warning(
+                        f"Device type {device_type} is a group, not supported currently")
 
-    def build_display_dashboard_model(self):
+    def build_display_dashboard_device_model(self):
         """ Build the dashboard model """
         device_type_model = []
         for device in self.registered_devices:
@@ -194,8 +222,42 @@ class HomeAssistantPlugin(PHALPlugin):
             })
         return display_list_model
 
-    def build_display_device_model(self, device_type):
-        """ Build the device model
+    def build_display_dashboard_area_model(self):
+        """ Build the display model by area """
+        unknown_area_devices = []
+        area_model = []
+        display_list_model = []
+        for device in self.registered_devices:
+            if device.device_area is not None:
+                if device.device_area not in area_model:
+                    area_model.append(device.device_area)
+            else:
+                unknown_area_devices.append(device)
+
+        display_list_model.append({
+            "type": "unknown",
+            "icon": "mdi:ungrouped",
+            "name": "Unknown Location",
+            "devices": [device.get_device_display_model() for device in unknown_area_devices]
+        })
+
+        for area in area_model:
+            area_list_model = []
+            for device in self.registered_devices:
+                if device.device_area == area:
+                    area_list_model.append(device.get_device_display_model())
+
+            display_list_model.append({
+                "type": area,
+                "icon": "mdi:grouped",
+                "name": area.replace("_", " ").title(),
+                "devices": area_list_model
+            })
+
+        return display_list_model
+
+    def build_display_device_type_devices_model(self, device_type):
+        """ Build the devices model based on the device type
 
         Args:
             device_type (String): The device type to build the model for
@@ -209,6 +271,24 @@ class HomeAssistantPlugin(PHALPlugin):
                 device_type_list_model.append(
                     device.get_device_display_model())
         return device_type_list_model
+
+    def build_display_area_devices_model(self, area):
+        """ Build the devices model based on the area 
+
+        Args:
+            area (String): The area to build the model for
+
+        Returns:
+            dict: The device model        
+        """
+        area_list_model = []
+        for device in self.registered_devices:
+            if device.device_area == area:
+                area_list_model.append(device.get_device_display_model())
+            if device.device_area is None and area == "unknown":
+                area_list_model.append(device.get_device_display_model())
+
+        return area_list_model
 
 # BUS API HANDLERS
     def handle_get_devices(self, message):
@@ -303,24 +383,33 @@ class HomeAssistantPlugin(PHALPlugin):
             Args:
                 message (Message): The message object
         """
-        display_list_model = {"items": self.build_display_list_model()}
+        display_list_model = []
+        for device in self.registered_devices:
+            display_list_model.append(device.get_device_display_model())
         self.bus.emit(message.response(data=display_list_model))
 
 # GUI INTERFACE HANDLERS
-    def handle_show_dashboard(self, message):
+    def handle_show_dashboard(self, message=None):
         """ Handle the show dashboard message 
 
             Args:
                 message (Message): The message object
         """
         if self.instance_available:
-            display_list_model = {
-                "items": self.build_display_dashboard_model()}
+            self.gui["use_websocket"] = self.config.get("use_websocket", False)
+            if not self.config.get("use_group_display"):
+                display_list_model = {
+                    "items": self.build_display_dashboard_device_model()}
+            else:
+                display_list_model = {
+                    "items": self.build_display_dashboard_area_model()}
+
             self.gui["dashboardModel"] = display_list_model
             self.gui["instanceAvailable"] = True
             self.gui.send_event("ovos.phal.plugin.homeassistant.change.dashboard", {
                                 "dash_type": "main"})
             page = join(dirname(__file__), "ui", "Dashboard.qml")
+            self.gui["use_group_display"] = self.config.get("use_group_display", False)
             self.gui.show_page(page, override_idle=True)
         else:
             self.gui["dashboardModel"] = {"items": []}
@@ -328,8 +417,12 @@ class HomeAssistantPlugin(PHALPlugin):
             self.gui.send_event("ovos.phal.plugin.homeassistant.change.dashboard", {
                                 "dash_type": "main"})
             page = join(dirname(__file__), "ui", "Dashboard.qml")
+            self.gui["use_group_display"] = self.config.get("use_group_display", False)
             self.gui.show_page(page, override_idle=True)
-            
+
+        LOG.info("Using group display")
+        LOG.info(self.config["use_group_display"])
+
     def handle_close_dashboard(self, message):
         """ Handle the close dashboard message
 
@@ -347,9 +440,22 @@ class HomeAssistantPlugin(PHALPlugin):
         device_type = message.data.get("device_type", None)
         if device_type is not None:
             self.gui["deviceDashboardModel"] = {
-                "items": self.build_display_device_model(device_type)}
+                "items": self.build_display_device_type_devices_model(device_type)}
             self.gui.send_event("ovos.phal.plugin.homeassistant.change.dashboard", {
                                 "dash_type": "device"})
+
+    def handle_show_area_dashboard(self, message):
+        """ Handle the show area dashboard message 
+
+            Args:
+                message (Message): The message object
+        """
+        area = message.data.get("area", None)
+        if area is not None:
+            self.gui["areaDashboardModel"] = {
+                "items": self.build_display_area_devices_model(area)}
+            self.gui.send_event("ovos.phal.plugin.homeassistant.change.dashboard", {
+                                "dash_type": "area"})
 
     def handle_update_device_dashboard(self, message):
         """ Handle the update device dashboard message 
@@ -360,4 +466,44 @@ class HomeAssistantPlugin(PHALPlugin):
         device_type = message.data.get("device_type", None)
         if device_type is not None:
             self.gui["deviceDashboardModel"] = {
-                "items": self.build_display_device_model(device_type)}
+                "items": self.build_display_device_type_devices_model(device_type)}
+
+    def handle_update_area_dashboard(self, message):
+        """ Handle the update area dashboard message
+
+            Args:
+                message (Message): The message object
+        """
+        area = message.data.get("area", None)
+        if area is not None:
+            self.gui["areaDashboardModel"] = {
+                "items": self.build_display_area_devices_model(area)}
+
+    def handle_set_group_display_settings(self, message):
+        """ Handle the set group display settings message
+
+            Args:
+                message (Message): The message object
+        """
+        group_settings = message.data.get("use_group_display", None)
+        if group_settings is not None:            
+            if group_settings == True:
+                use_group_display = True
+                self.config["use_group_display"] = use_group_display
+            else: 
+                use_group_display = False
+                self.config["use_group_display"] = use_group_display
+    
+            config_patch = {
+                "PHAL": {
+                    "ovos-PHAL-plugin-homeassistant": {
+                        "host": self.config.get("host"),
+                        "api_key": self.config.get("api_key"),
+                        "use_websocket": self.config.get("use_websocket", False),
+                        "use_group_display": use_group_display
+                    }
+                }
+            }
+            update_mycroft_config(config=config_patch, bus=self.bus)
+            self.gui["use_group_display"] = self.config.get("use_group_display")
+            self.handle_show_dashboard()

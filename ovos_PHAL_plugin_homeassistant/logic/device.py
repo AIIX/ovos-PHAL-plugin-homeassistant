@@ -174,7 +174,8 @@ class HomeAssistantDevice:
             "icon": self.device_icon,
             "state": self.device_state,
             "type": self.device_type,
-            "attributes": self.device_attributes
+            "attributes": self.device_attributes,
+            "host": self.connector.host
         }
 
 
@@ -656,3 +657,8 @@ class HomeAssistantVacuum(HomeAssistantDevice):
 
     def get_status(self):
         return self.device_attributes["status"]
+
+class HomeAssistantCamera(HomeAssistantDevice):
+    def __init__(self, connector, device_id, device_icon, device_name, device_state, device_attributes, device_area=None):
+        super().__init__(connector, device_id, device_icon,
+                         device_name, device_state, device_attributes, device_area)
