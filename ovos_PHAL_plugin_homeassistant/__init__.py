@@ -32,6 +32,8 @@ class HomeAssistantPlugin(PHALPlugin):
         self.gui = GUIInterface(bus=self.bus, skill_id=self.name)
         self.integrator = Integrator(self.bus, self.gui)
         self.instance_available = False
+        self.use_ws = False
+        self.enable_debug = self.config.get("enable_debug", False)
         self.device_types = {
             "sensor": HomeAssistantSensor,
             "binary_sensor": HomeAssistantBinarySensor,
@@ -95,14 +97,19 @@ class HomeAssistantPlugin(PHALPlugin):
                 bool: True if the connection is valid, False otherwise
         """
         try:
-            if self.config.get('use_websocket'):
-                LOG.info("Using websocket connection")
-                validator = HomeAssistantWSConnector(host, api_key)
+            if self.use_ws:
+                validator = HomeAssistantWSConnector(host, api_key, self.enable_debug)            
             else:
-                validator = HomeAssistantRESTConnector(host, api_key)
+                validator = HomeAssistantRESTConnector(host, api_key, self.enable_debug)
 
             validator.get_all_devices()
+
+            if self.use_ws:
+                if validator.client:
+                    validator.disconnect()
+
             return True
+
         except Exception as e:
             LOG.error(e)
             return False
@@ -118,15 +125,7 @@ class HomeAssistantPlugin(PHALPlugin):
 
         if host and key:
             if host.startswith("ws") or host.startswith("wss"):
-                config_patch = {
-                        "PHAL": {
-                            "ovos-PHAL-plugin-homeassistant": {
-                                "use_websocket": True
-                            }
-                        }
-                }
-                update_mycroft_config(config=config_patch, bus=self.bus)
-                sleep(2) # wait for config to be updated
+                self.use_ws = True
 
             if self.validate_instance_connection(host, key):
                 self.config["host"] = host
@@ -149,21 +148,24 @@ class HomeAssistantPlugin(PHALPlugin):
         """ Initialize instance configuration """
         configuration_host = self.config.get("host", "")
         configuration_api_key = self.config.get("api_key", "")
+        if configuration_host.startswith("ws") or configuration_host.startswith("wss"):
+            self.use_ws = True
+        
         if not self.config.get("use_group_display"):
             self.config["use_group_display"] = False
 
         if configuration_host != "" and configuration_api_key != "":
             self.instance_available = True
-            if self.config.get('use_websocket'):
+            if self.use_ws:
                 self.connector = HomeAssistantWSConnector(configuration_host,
-                                                          configuration_api_key)
+                                                          configuration_api_key, self.enable_debug)
             else:
                 self.connector = HomeAssistantRESTConnector(
-                    configuration_host, configuration_api_key)
+                    configuration_host, configuration_api_key, self.enable_debug)
             self.devices = self.connector.get_all_devices()
             self.registered_devices = []
             self.build_devices()
-            self.gui["use_websocket"] = self.config.get("use_websocket", False)
+            self.gui["use_websocket"] = self.use_ws
             self.gui["instanceAvailable"] = True
             self.bus.emit(Message("ovos.phal.plugin.homeassistant.ready"))
         else:
@@ -185,8 +187,10 @@ class HomeAssistantPlugin(PHALPlugin):
                     device_icon = f"mdi:{device_type}"
                     device_state = device.get("state", None)
                     device_area = device.get("area_id", None)
-                    LOG.info(
-                        f"Device added: {device_name} - {device_type} - {device_area}")
+                    if self.enable_debug:
+                        LOG.info(
+                            f"Device added: {device_name} - {device_type} - {device_area}")
+
                     device_attributes = device.get("attributes", {})
                     if device_type in self.device_types:
                         self.registered_devices.append(self.device_types[device_type](
@@ -396,7 +400,7 @@ class HomeAssistantPlugin(PHALPlugin):
                 message (Message): The message object
         """
         if self.instance_available:
-            self.gui["use_websocket"] = self.config.get("use_websocket", False)
+            self.gui["use_websocket"] = self.use_ws
             if not self.config.get("use_group_display"):
                 display_list_model = {
                     "items": self.build_display_dashboard_device_model()}
@@ -420,8 +424,9 @@ class HomeAssistantPlugin(PHALPlugin):
             self.gui["use_group_display"] = self.config.get("use_group_display", False)
             self.gui.show_page(page, override_idle=True)
 
-        LOG.info("Using group display")
-        LOG.info(self.config["use_group_display"])
+        if self.enable_debug:
+            LOG.debug("Using group display")
+            LOG.debug(self.config["use_group_display"])
 
     def handle_close_dashboard(self, message):
         """ Handle the close dashboard message
@@ -499,7 +504,6 @@ class HomeAssistantPlugin(PHALPlugin):
                     "ovos-PHAL-plugin-homeassistant": {
                         "host": self.config.get("host"),
                         "api_key": self.config.get("api_key"),
-                        "use_websocket": self.config.get("use_websocket", False),
                         "use_group_display": use_group_display
                     }
                 }
