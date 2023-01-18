@@ -6,7 +6,6 @@ import requests
 import websockets
 from ovos_utils.log import LOG
 
-
 class HomeAssistantClient:
     def __init__(self, url, token):
         self.url = url
@@ -83,13 +82,18 @@ class HomeAssistantClient:
         }
         await self.websocket.send(json.dumps(message))
 
-    async def send_raw_command(self, command):
+    async def send_raw_command(self, command, args):
         id = self.counter
         self.last_id = id
         message = {
             "id": id,
             "type": command
         }
+
+        if not args is None:
+            for key, value in args.items():
+                message[key] = value
+
         await self.websocket.send(json.dumps(message))
         response = await self.response_queue.get()
         self.response_queue.task_done()
@@ -263,9 +267,9 @@ class HomeAssistantClient:
     def unregister_event_listener(self):
         self.event_listener = None
 
-    def send_command_sync(self, command):
+    def send_command_sync(self, command, args=None):
         task = asyncio.run_coroutine_threadsafe(
-            self.send_raw_command(command), self.loop)
+            self.send_raw_command(command, args), self.loop)
         return task.result()
 
     def call_service_sync(self, domain, service, service_data):

@@ -1,3 +1,5 @@
+import json
+import uuid
 from os.path import dirname, join
 from ovos_utils.log import LOG
 from mycroft_bus_client.message import Message
@@ -14,8 +16,6 @@ from ovos_PHAL_plugin_homeassistant.logic.integration import Integrator
 from ovos_PHAL_plugin_homeassistant.logic.utils import (map_entity_to_device_type,
                                                         check_if_device_type_is_group)
 from ovos_config.config import update_mycroft_config
-from time import sleep
-
 
 class HomeAssistantPlugin(PHALPlugin):
     def __init__(self, bus=None, config=None):
@@ -26,6 +26,9 @@ class HomeAssistantPlugin(PHALPlugin):
                 config (dict): The plugin configuration
         """
         super().__init__(bus=bus, name="ovos-PHAL-plugin-homeassistant", config=config)
+        self.oauth_client_id = None
+        self.munged_id = "ovos-PHAL-plugin-homeassistant_homeassistant-phal-plugin"
+        self.temporary_instance = None
         self.connector = None
         self.registered_devices = []
         self.bus = bus
@@ -60,6 +63,7 @@ class HomeAssistantPlugin(PHALPlugin):
                     self.handle_get_device_display_list_model)
         self.bus.on("ovos.phal.plugin.homeassistant.call.supported.function",
                     self.handle_call_supported_function)
+        self.bus.on("ovos.phal.plugin.homeassistant.start.oauth.flow", self.handle_start_oauth_flow)
 
         # GUI EVENTS
         self.bus.on("ovos-PHAL-plugin-homeassistant.home",
@@ -82,6 +86,11 @@ class HomeAssistantPlugin(PHALPlugin):
                     self.setup_configuration)
         self.bus.on("configuration.updated", self.init_configuration)
         self.bus.on("configuration.patch", self.init_configuration)
+
+        # LISTEN FOR OAUTH RESPONSE
+        self.bus.on("oauth.app.host.info.response", self.handle_oauth_host_info)
+        self.bus.on("oauth.generate.qr.response", self.handle_qr_oauth_response)
+        self.bus.on(f"oauth.token.response.{self.munged_id}", self.handle_token_oauth_response)
 
         self.init_configuration()
 
@@ -511,3 +520,78 @@ class HomeAssistantPlugin(PHALPlugin):
             update_mycroft_config(config=config_patch, bus=self.bus)
             self.gui["use_group_display"] = self.config.get("use_group_display")
             self.handle_show_dashboard()
+
+# OAuth QR Code Flow Handlers
+    def request_host_info_from_oauth(self):
+        self.bus.emit(Message("oauth.get.app.host.info"))
+
+    def handle_oauth_host_info(self, message):
+        host = message.data.get("host", None)
+        port = message.data.get("port", None)
+        self.oauth_client_id = f"http://{host}:{port}"
+
+        if self.temporary_instance:
+            self.oauth_register()
+            self.start_oauth_flow()
+            
+    def handle_start_oauth_flow(self, message):
+        """ Handle the start oauth flow message
+
+            Args:
+                message (Message): The message object
+        """
+        instance = message.data.get("instance", None)
+        if instance:
+            self.temporary_instance = instance
+            self.request_host_info_from_oauth()
+
+    def oauth_register(self):
+        """ Register the phal plugin with the oauth service """
+        host = self.temporary_instance.replace("ws://", "http://").replace("wss://", "https://")
+        auth_endpoint = f"{host}/auth/authorize"
+        token_endpoint = f"{host}/auth/token"
+        self.bus.emit(Message("oauth.register", {
+            "client_id": self.oauth_client_id,
+            "skill_id": "ovos-PHAL-plugin-homeassistant",
+            "app_id": "homeassistant-phal-plugin",
+            "auth_endpoint": auth_endpoint,
+            "token_endpoint": token_endpoint,
+            "refresh_endpoint": "",
+        }))
+
+    def start_oauth_flow(self):
+        host = self.temporary_instance.replace("ws://", "http://").replace("wss://", "https://")
+        app_id = "homeassistant-phal-plugin"
+        skill_id = "ovos-PHAL-plugin-homeassistant"
+        self.bus.emit(Message("oauth.generate.qr.request", {
+            "app_id": app_id,
+            "skill_id": skill_id
+        }))
+
+    def handle_qr_oauth_response(self, message):
+        qr_code_url = message.data.get("qr", None)
+        self.gui.send_event("ovos.phal.plugin.homeassistant.oauth.qr.update", {
+            "qr": qr_code_url
+        })
+
+    def handle_token_oauth_response(self, message):
+        response = message.data
+        access_token = response.get("access_token", None)
+        if access_token:
+            self.get_long_term_token(access_token)
+
+    def get_long_term_token(self, short_term_token):
+        instance = self.temporary_instance.replace("http://", "ws://").replace("https://", "wss://")
+        token = short_term_token
+        wsClient = HomeAssistantWSConnector(instance, token, self.enable_debug)
+        client_name = "ovos-PHAL-plugin-homeassistant-" + str(uuid.uuid4().hex)[:4]
+        token_response = wsClient.call_command("auth/long_lived_access_token", {"client_name": client_name, "lifespan": 1825})
+
+        if wsClient.client:
+            wsClient.disconnect()
+
+        if token_response:
+            if token_response["success"]:
+                long_term_token = token_response["result"]
+                self.gui.send_event("ovos.phal.plugin.homeassistant.oauth.success", {})
+                self.setup_configuration(Message("ovos.phal.plugin.homeassistant.setup", {"url": instance, "api_key": long_term_token}))

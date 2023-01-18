@@ -112,7 +112,6 @@ class HomeAssistantConnector:
             arguments (dict): The arguments to pass to the function.
         """
 
-
 class HomeAssistantRESTConnector(HomeAssistantConnector):
     def __init__(self, host, api_key, enable_debug=False):
         super().__init__(host, api_key)
@@ -328,6 +327,10 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         arguments = arguments or dict()
         arguments['entity_id'] = device_id
         self.client.call_service_sync(device_type, function, arguments)
+
+    def call_command(self, command, arguments=None):
+        response = self.client.send_command_sync(command, arguments)
+        return response
 
     def assign_group_for_devices(self, devices):
         devices_from_registry = self.client.send_command_sync('config/device_registry/list')
