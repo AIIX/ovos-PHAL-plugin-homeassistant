@@ -556,6 +556,7 @@ class HomeAssistantPlugin(PHALPlugin):
             "app_id": "homeassistant-phal-plugin",
             "auth_endpoint": auth_endpoint,
             "token_endpoint": token_endpoint,
+            "shell_integration": False,
             "refresh_endpoint": "",
         }))
 
