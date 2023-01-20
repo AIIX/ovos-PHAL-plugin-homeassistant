@@ -24,11 +24,11 @@ Mycroft.Delegate {
     property var qrImagePath
 
     function get_page_name() {
-       if (dashboardSwipeView.currentIndex == 0) {
-           return "Dashboard"
-       } else {
-           return tabBarModel[bar.currentIndex].name
-       }
+        if (dashboardSwipeView.currentIndex == 0) {
+            return "Dashboard"
+        } else {
+            return tabBarModel[bar.currentIndex].name
+        }
     }
 
     function change_tab_to_type(type) {
@@ -68,26 +68,25 @@ Mycroft.Delegate {
 
     onGuiEvent: {
         switch (eventName) {
-            case "ovos.phal.plugin.homeassistant.change.dashboard":
-                var requested_page = data.dash_type
-                if (requested_page === "main") {
-                    dashboardSwipeView.currentIndex = 0
-                } else if (requested_page === "device") {
-                    dashboardSwipeView.currentIndex = 1
-                } else if (requested_page === "area") {
-                    dashboardSwipeView.currentIndex = 1
-                }
-                break
-            case "ovos.phal.plugin.homeassistant.integration.query_media.result":
-                deviceControlsLoader.mediaModel = data.results
-                console.log(JSON.stringify(data.results))
-                break
-            case "ovos.phal.plugin.homeassistant.oauth.qr.update":
-                dashboardRoot.qrImagePath = Qt.resolvedUrl(data.qr)
-                break
-            case "ovos.phal.plugin.homeassistant.oauth.success":
-                instaceSetupPopupBox.close()
-                break               
+        case "ovos.phal.plugin.homeassistant.change.dashboard":
+            var requested_page = data.dash_type
+            if (requested_page === "main") {
+                dashboardSwipeView.currentIndex = 0
+            } else if (requested_page === "device") {
+                dashboardSwipeView.currentIndex = 1
+            } else if (requested_page === "area") {
+                dashboardSwipeView.currentIndex = 1
+            }
+            break
+        case "ovos.phal.plugin.homeassistant.integration.query_media.result":
+            deviceControlsLoader.mediaModel = data.results
+            break
+        case "ovos.phal.plugin.homeassistant.oauth.qr.update":
+            dashboardRoot.qrImagePath = Qt.resolvedUrl(data.qr)
+            break
+        case "ovos.phal.plugin.homeassistant.oauth.success":
+            instaceSetupPopupBox.close()
+            break
         }
     }
 
@@ -100,14 +99,17 @@ Mycroft.Delegate {
             var tabModel = [{"name": "Home", "type": "main"}]
             for (var i = 0; i < dashboardModel.items.length; i++) {
                 var item = dashboardModel.items[i]
-                tabModel.push({"name": item.name + "s", "type": item.type})   
+                if(dashboardRoot.useGroupDisplay) {
+                    tabModel.push({"name": item.name, "type": item.type})
+                } else {
+                    tabModel.push({"name": item.name + "s", "type": item.type})
+                }
             }
             tabBarModel = tabModel
         }
     }
 
     onDeviceDashboardModelChanged: {
-        console.log("deviceDashboardModel changed")
         if (deviceDashboardModel) {
             devicesGridView.model = deviceDashboardModel.items
 
@@ -118,7 +120,6 @@ Mycroft.Delegate {
     }
 
     onAreaDashboardModelChanged: {
-        console.log("areaDashboardModel changed")
         if (areaDashboardModel) {
             devicesGridView.model = areaDashboardModel.items
 
@@ -346,7 +347,7 @@ Mycroft.Delegate {
                         Kirigami.Heading {
                             id: instanceSetupButtonText
                             level: 2
-                            Layout.fillHeight: true          
+                            Layout.fillHeight: true
                             wrapMode: Text.WordWrap
                             font.bold: true
                             elide: Text.ElideRight
@@ -360,7 +361,7 @@ Mycroft.Delegate {
 
                 onClicked: {
                     instaceSetupPopupBox.open()
-                } 
+                }
             }
         }
 
@@ -438,33 +439,116 @@ Mycroft.Delegate {
                 anchors.right: parent.right
                 color: Kirigami.Theme.highlightColor
             }
-
-            TabBar {
-                id: bar
+            Item {
+                id: bottomBarAreaTabsContainer
                 width: parent.width
-                height: parent.height - Kirigami.Units.smallSpacing
+                height: parent.height
                 anchors.bottom: parent.bottom
                 visible: dashboardRoot.horizontalMode ? 1 : 0
+                property bool leftButtonActive: tabBarFlickableObject.contentX > 0 ? 1 : 0
+                property bool rightButtonActive: tabBarFlickableObject.contentX < tabBarFlickableObject.contentWidth - tabBarFlickableObject.width - Mycroft.Units.gridUnit * 12 ? 1 : 0
 
-                Repeater {
-                    model: tabBarModel
-                    delegate: TabButton {
-                        text: modelData.name
-                        width: parent.width / tabBarModel.count
-                        height: parent.height
+                Button {
+                    id: arrowLeftTabBarFlicker
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
+                    width: Mycroft.Units.gridUnit * 3
+                    height: Mycroft.Units.gridUnit * 3
+                    enabled: bottomBarAreaTabsContainer.leftButtonActive ? 1 : 0
+                    opacity: enabled ? 1 : 0.5
+                    
+                    background: Rectangle {
+                        color: "transparent"
+                    }
 
-                        onClicked: {
-                            if(dashboardRoot.horizontalMode) {
-                                if(modelData.type === "main") {
-                                    dashboardSwipeView.currentIndex = 0
-                                } else {
-                                    if(dashboardRoot.useGroupDisplay) {
-                                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.area.dashboard", {"area": modelData.type})    
-                                    } else {
-                                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.device.dashboard", {"device_type": modelData.type})
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            id: arrowLeftTabBarFlickerIcon
+                            width: parent.width * 0.8
+                            height: parent.height * 0.8
+                            anchors.centerIn: parent
+                            source: "go-previous-symbolic"
+                        }
+                    }
+
+                    onClicked:  {
+                        if (tabBarFlickableObject.contentX > 0) {
+                            tabBarFlickableObject.contentX -= Mycroft.Units.gridUnit * 12
+                        }
+                    }
+                }
+
+                Flickable {
+                    id: tabBarFlickableObject
+                    anchors.left: arrowLeftTabBarFlicker.right
+                    anchors.leftMargin: Mycroft.Units.gridUnit * 0.5
+                    anchors.rightMargin: Mycroft.Units.gridUnit * 0.5
+                    anchors.right: arrowRightTabBarFlicker.left
+                    height: parent.height
+                    anchors.bottom: parent.bottom
+                    flickableDirection: Flickable.HorizontalFlick
+                    contentWidth: parent.width * 2
+                    contentHeight: height
+                    clip: true
+
+                    TabBar {
+                        id: bar
+                        width: (Mycroft.Units.gridUnit * 12) * tabBarModel.count
+                        height: parent.height - Kirigami.Units.smallSpacing
+                        anchors.bottom: parent.bottom
+
+                        Repeater {
+                            id: tabBarModelRepeater
+                            model: tabBarModel
+                            delegate: TabButton {
+                                text: modelData.name
+                                width: Mycroft.Units.gridUnit * 12
+                                height: parent.height
+
+                                onClicked: {
+                                    if(dashboardRoot.horizontalMode) {
+                                        if(modelData.type === "main") {
+                                            dashboardSwipeView.currentIndex = 0
+                                        } else {
+                                            if(dashboardRoot.useGroupDisplay) {
+                                                Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.area.dashboard", {"area": modelData.type})
+                                            } else {
+                                                Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.device.dashboard", {"device_type": modelData.type})
+                                            }
+                                        }
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                Button {
+                    id: arrowRightTabBarFlicker
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    width: Mycroft.Units.gridUnit * 3
+                    height: Mycroft.Units.gridUnit * 3
+                    enabled: bottomBarAreaTabsContainer.rightButtonActive && tabBarModelRepeater.count > 2 ? 1 : 0
+                    opacity: enabled ? 1 : 0.5
+
+                    background: Rectangle {
+                        color: "transparent"
+                    }
+
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            id: arrowRightTabBarFlickerIcon
+                            width: parent.width * 0.8
+                            height: parent.height * 0.8
+                            anchors.centerIn: parent
+                            source: "go-next-symbolic"
+                        }
+                    }
+
+                    onClicked: {
+                        if(tabBarFlickableObject.contentX < tabBarFlickableObject.contentWidth - tabBarFlickableObject.width) {
+                            tabBarFlickableObject.contentX += Mycroft.Units.gridUnit * 12
                         }
                     }
                 }
@@ -504,7 +588,7 @@ Mycroft.Delegate {
                         Kirigami.Heading {
                             id: returnToMainDashboardButtonVerticalModeText
                             level: 2
-                            Layout.fillHeight: true          
+                            Layout.fillHeight: true
                             wrapMode: Text.WordWrap
                             font.bold: true
                             elide: Text.ElideRight

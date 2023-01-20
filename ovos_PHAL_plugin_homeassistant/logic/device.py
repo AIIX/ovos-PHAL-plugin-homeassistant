@@ -155,15 +155,15 @@ class HomeAssistantDevice:
     def poll(self):
         """ Poll the device. """
         full_state_json = self.connector.get_device_state(self.device_id)
-        # LOG.debug(full_state_json)
-        if full_state_json == 'unavailable':
-            LOG.warning(f"State unavailable for device: {self.device_id}")
-        elif not isinstance(full_state_json, dict):
-            LOG.error(f'({self.device_name}) Expected dict state but got: '
-                      f'{full_state_json}')
-        else:
-            self.device_state = full_state_json.get("state", "unknown")
-            self.device_attributes = full_state_json.get("attributes", {})
+        if full_state_json:
+            if full_state_json == 'unavailable':
+                LOG.warning(f"State unavailable for device: {self.device_id}")
+            elif not isinstance(full_state_json, dict):
+                LOG.error(f'({self.device_name}) Expected dict state but got: '
+                        f'{full_state_json}')
+            else:
+                self.device_state = full_state_json.get("state", "unknown")
+                self.device_attributes = full_state_json.get("attributes", {})
 
     def get_device_display_model(self):
         """ Get the display model of the device. """

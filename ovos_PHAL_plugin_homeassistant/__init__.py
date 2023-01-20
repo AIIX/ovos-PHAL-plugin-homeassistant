@@ -488,7 +488,7 @@ class HomeAssistantPlugin(PHALPlugin):
             Args:
                 message (Message): The message object
         """
-        area = message.data.get("area", None)
+        area = message.data.get("area_type", None)
         if area is not None:
             self.gui["areaDashboardModel"] = {
                 "items": self.build_display_area_devices_model(area)}

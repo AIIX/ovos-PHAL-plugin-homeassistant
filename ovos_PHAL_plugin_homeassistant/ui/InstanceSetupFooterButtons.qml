@@ -44,7 +44,7 @@ RowLayout {
                 Kirigami.Heading {
                     id: instanceSetupPopupStackBackButtonText
                     level: 2
-                    Layout.fillHeight: true          
+                    Layout.fillHeight: true
                     wrapMode: Text.WordWrap
                     font.bold: true
                     elide: Text.ElideRight
@@ -61,7 +61,7 @@ RowLayout {
         }
 
         onPressed: {
-            instanceSetupPopupStackBackButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)    
+            instanceSetupPopupStackBackButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)
         }
 
         onReleased: {
@@ -104,7 +104,7 @@ RowLayout {
                 Kirigami.Heading {
                     id: instanceSetupPopupConfirmButtonText
                     level: 2
-                    Layout.fillHeight: true          
+                    Layout.fillHeight: true
                     wrapMode: Text.WordWrap
                     font.bold: true
                     elide: Text.ElideRight
@@ -122,11 +122,11 @@ RowLayout {
         }
 
         onPressed: {
-            instanceSetupPopupConfirmButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)    
+            instanceSetupPopupConfirmButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)
         }
         onReleased: {
             instanceSetupPopupConfirmButtonBackground.color = Kirigami.Theme.highlightColor
-        } 
+        }
     }
 
     Button {
@@ -162,7 +162,7 @@ RowLayout {
                 Kirigami.Heading {
                     id: instanceSetupPopupCancelButtonText
                     level: 2
-                    Layout.fillHeight: true          
+                    Layout.fillHeight: true
                     wrapMode: Text.WordWrap
                     font.bold: true
                     elide: Text.ElideRight
@@ -179,10 +179,10 @@ RowLayout {
         }
 
         onPressed: {
-            instanceSetupPopupCancelButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)    
+            instanceSetupPopupCancelButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)
         }
         onReleased: {
             instanceSetupPopupCancelButtonBackground.color = Kirigami.Theme.highlightColor
-        } 
+        }
     }
 }
