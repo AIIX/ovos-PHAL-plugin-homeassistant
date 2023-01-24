@@ -21,13 +21,14 @@ Mycroft.Delegate {
     property bool useWebsocket: sessionData.use_websocket
     property var tabBarModel
     property bool horizontalMode: width >= height ? true : false
+    property var qrImagePath
 
     function get_page_name() {
-       if (dashboardSwipeView.currentIndex == 0) {
-           return "Dashboard"
-       } else {
-           return tabBarModel[bar.currentIndex].name
-       }
+        if (dashboardSwipeView.currentIndex == 0) {
+            return "Dashboard"
+        } else {
+            return tabBarModel[bar.currentIndex].name
+        }
     }
 
     function change_tab_to_type(type) {
@@ -67,20 +68,25 @@ Mycroft.Delegate {
 
     onGuiEvent: {
         switch (eventName) {
-            case "ovos.phal.plugin.homeassistant.change.dashboard":
-                var requested_page = data.dash_type
-                if (requested_page === "main") {
-                    dashboardSwipeView.currentIndex = 0
-                } else if (requested_page === "device") {
-                    dashboardSwipeView.currentIndex = 1
-                } else if (requested_page === "area") {
-                    dashboardSwipeView.currentIndex = 1
-                }
-                break
-            case "ovos.phal.plugin.homeassistant.integration.query_media.result":
-                deviceControlsLoader.mediaModel = data.results
-                console.log(JSON.stringify(data.results))
-                break                
+        case "ovos.phal.plugin.homeassistant.change.dashboard":
+            var requested_page = data.dash_type
+            if (requested_page === "main") {
+                dashboardSwipeView.currentIndex = 0
+            } else if (requested_page === "device") {
+                dashboardSwipeView.currentIndex = 1
+            } else if (requested_page === "area") {
+                dashboardSwipeView.currentIndex = 1
+            }
+            break
+        case "ovos.phal.plugin.homeassistant.integration.query_media.result":
+            deviceControlsLoader.mediaModel = data.results
+            break
+        case "ovos.phal.plugin.homeassistant.oauth.qr.update":
+            dashboardRoot.qrImagePath = Qt.resolvedUrl(data.qr)
+            break
+        case "ovos.phal.plugin.homeassistant.oauth.success":
+            instaceSetupPopupBox.close()
+            break
         }
     }
 
@@ -93,14 +99,17 @@ Mycroft.Delegate {
             var tabModel = [{"name": "Home", "type": "main"}]
             for (var i = 0; i < dashboardModel.items.length; i++) {
                 var item = dashboardModel.items[i]
-                tabModel.push({"name": item.name + "s", "type": item.type})   
+                if(dashboardRoot.useGroupDisplay) {
+                    tabModel.push({"name": item.name, "type": item.type})
+                } else {
+                    tabModel.push({"name": item.name + "s", "type": item.type})
+                }
             }
             tabBarModel = tabModel
         }
     }
 
     onDeviceDashboardModelChanged: {
-        console.log("deviceDashboardModel changed")
         if (deviceDashboardModel) {
             devicesGridView.model = deviceDashboardModel.items
 
@@ -111,7 +120,6 @@ Mycroft.Delegate {
     }
 
     onAreaDashboardModelChanged: {
-        console.log("areaDashboardModel changed")
         if (areaDashboardModel) {
             devicesGridView.model = areaDashboardModel.items
 
@@ -339,7 +347,7 @@ Mycroft.Delegate {
                         Kirigami.Heading {
                             id: instanceSetupButtonText
                             level: 2
-                            Layout.fillHeight: true          
+                            Layout.fillHeight: true
                             wrapMode: Text.WordWrap
                             font.bold: true
                             elide: Text.ElideRight
@@ -353,7 +361,7 @@ Mycroft.Delegate {
 
                 onClicked: {
                     instaceSetupPopupBox.open()
-                } 
+                }
             }
         }
 
@@ -431,34 +439,143 @@ Mycroft.Delegate {
                 anchors.right: parent.right
                 color: Kirigami.Theme.highlightColor
             }
-
-            TabBar {
-                id: bar
+            Item {
+                id: bottomBarAreaTabsContainer
                 width: parent.width
-                height: parent.height - Kirigami.Units.smallSpacing
+                height: parent.height
                 anchors.bottom: parent.bottom
                 visible: dashboardRoot.horizontalMode ? 1 : 0
+                property bool leftButtonActive: tabBarFlickableObject.contentX > 0 ? 1 : 0
+                property bool rightButtonActive: tabBarFlickableObject.contentX < tabBarFlickableObject.contentWidth - tabBarFlickableObject.width ? 1 : 0
 
-                Repeater {
-                    model: tabBarModel
-                    delegate: TabButton {
-                        text: modelData.name
-                        width: parent.width / tabBarModel.count
-                        height: parent.height
+                Button {
+                    id: arrowLeftTabBarFlicker
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
+                    width: Mycroft.Units.gridUnit * 3
+                    height: Mycroft.Units.gridUnit * 3
+                    enabled: bottomBarAreaTabsContainer.leftButtonActive ? 1 : 0
+                    opacity: enabled ? 1 : 0.5
+                    
+                    background: Rectangle {
+                        id: arrowLeftTabBarFlickerBackground
+                        color: "transparent"
+                    }
 
-                        onClicked: {
-                            if(dashboardRoot.horizontalMode) {
-                                if(modelData.type === "main") {
-                                    dashboardSwipeView.currentIndex = 0
-                                } else {
-                                    if(dashboardRoot.useGroupDisplay) {
-                                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.area.dashboard", {"area": modelData.type})    
-                                    } else {
-                                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.device.dashboard", {"device_type": modelData.type})
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            id: arrowLeftTabBarFlickerIcon
+                            width: parent.width * 0.8
+                            height: parent.height * 0.8
+                            anchors.centerIn: parent
+                            source: "go-previous-symbolic"
+                        }
+                    }
+
+                    onClicked:  {
+                        if (tabBarFlickableObject.contentX > 0) {
+                            tabBarFlickableObject.contentX -= Mycroft.Units.gridUnit * 12
+                        }
+                    }
+
+                    onPressAndHold: {
+                        tabBarFlickableObject.contentX = 0
+                        arrowLeftTabBarFlickerBackground.color = "transparent"
+                    }
+
+                    onPressed: {
+                        arrowLeftTabBarFlickerBackground.color = Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.5)
+                    }
+                    onReleased: {
+                        arrowLeftTabBarFlickerBackground.color = "transparent"
+                    }
+                }
+
+                Flickable {
+                    id: tabBarFlickableObject
+                    anchors.left: arrowLeftTabBarFlicker.right
+                    anchors.leftMargin: Mycroft.Units.gridUnit * 0.5
+                    anchors.rightMargin: Mycroft.Units.gridUnit * 0.5
+                    anchors.right: arrowRightTabBarFlicker.left
+                    height: parent.height
+                    anchors.bottom: parent.bottom
+                    flickableDirection: Flickable.HorizontalFlick
+                    contentWidth: tabBarModelRepeater.count * Mycroft.Units.gridUnit * 12
+                    contentHeight: height
+                    clip: true
+
+                    TabBar {
+                        id: bar
+                        width: (Mycroft.Units.gridUnit * 12) * tabBarModel.count
+                        height: parent.height - Kirigami.Units.smallSpacing
+                        anchors.bottom: parent.bottom
+
+                        Repeater {
+                            id: tabBarModelRepeater
+                            model: tabBarModel
+                            delegate: TabButton {
+                                text: modelData.name
+                                width: Mycroft.Units.gridUnit * 12
+                                height: parent.height
+
+                                onClicked: {
+                                    if(dashboardRoot.horizontalMode) {
+                                        if(modelData.type === "main") {
+                                            dashboardSwipeView.currentIndex = 0
+                                        } else {
+                                            if(dashboardRoot.useGroupDisplay) {
+                                                Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.area.dashboard", {"area": modelData.type})
+                                            } else {
+                                                Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.show.device.dashboard", {"device_type": modelData.type})
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+                    }
+                }
+
+                Button {
+                    id: arrowRightTabBarFlicker
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    width: Mycroft.Units.gridUnit * 3
+                    height: Mycroft.Units.gridUnit * 3
+                    enabled: bottomBarAreaTabsContainer.rightButtonActive && tabBarModelRepeater.count > 2 ? 1 : 0
+                    opacity: enabled ? 1 : 0.5
+
+                    background: Rectangle {
+                        id: arrowRightTabBarFlickerBackground
+                        color: "transparent"
+                    }
+
+                    contentItem: Item {
+                        Kirigami.Icon {
+                            id: arrowRightTabBarFlickerIcon
+                            width: parent.width * 0.8
+                            height: parent.height * 0.8
+                            anchors.centerIn: parent
+                            source: "go-next-symbolic"
+                        }
+                    }
+
+                    onClicked: {
+                        if(tabBarFlickableObject.contentX < tabBarFlickableObject.contentWidth - tabBarFlickableObject.width) {
+                            tabBarFlickableObject.contentX += Mycroft.Units.gridUnit * 12
+                        }
+                    }
+
+                    onPressAndHold: {
+                        tabBarFlickableObject.contentX = tabBarFlickableObject.contentWidth - tabBarFlickableObject.width
+                        arrowRightTabBarFlickerBackground.color = "transparent"
+                    }
+
+                    onPressed: {
+                        arrowRightTabBarFlickerBackground.color = Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.5)
+                    }
+                    onReleased: {
+                        arrowRightTabBarFlickerBackground.color = "transparent"
                     }
                 }
             }
@@ -497,7 +614,7 @@ Mycroft.Delegate {
                         Kirigami.Heading {
                             id: returnToMainDashboardButtonVerticalModeText
                             level: 2
-                            Layout.fillHeight: true          
+                            Layout.fillHeight: true
                             wrapMode: Text.WordWrap
                             font.bold: true
                             elide: Text.ElideRight
@@ -522,236 +639,12 @@ Mycroft.Delegate {
             }
         }
 
-        Popup {
+        InstanceSetup {
             id: instaceSetupPopupBox
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
-            width: parent.width * 0.8
-            height: parent.height * 0.8
-            
-            background: Rectangle {
-                color: Qt.darker(Kirigami.Theme.backgroundColor, 1)
-                radius: Mycroft.Units.gridUnit * 0.5
-            }
-            
-            contentItem: Item {
-                Item {
-                    anchors.fill: parent
-                    anchors.margins: Mycroft.Units.gridUnit
-
-                    Kirigami.Heading {
-                        id: instanceSetupPopupTitle
-                        level: 2
-                        text: qsTr("Setup Home Assistant Instance")
-                        font.bold: true
-                        color: Kirigami.Theme.textColor
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: Mycroft.Units.gridUnit * 2
-                    }
-
-                    Kirigami.Separator {
-                        anchors.top: instanceSetupPopupTitle.bottom
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        color: Kirigami.Theme.highlightColor
-                    }
-                    
-                    Label {
-                        id: instanceSetupPopupUrlLabel
-                        text: qsTr("Home Assistant Instance URL")
-                        fontSizeMode: Text.Fit
-                        minimumPixelSize: 10
-                        elide: Text.ElideRight
-                        font.pixelSize: Mycroft.Units.gridUnit * 1.5
-                        color: Kirigami.Theme.textColor
-                        anchors.top: instanceSetupPopupTitle.bottom
-                        anchors.topMargin: Kirigami.Units.smallSpacing
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: Mycroft.Units.gridUnit * 2
-                    }
-
-                    Label {
-                        id: subTextInstanceSetupPopupUrlLabel
-                        fontSizeMode: Text.Fit
-                        minimumPixelSize: 8
-                        elide: Text.ElideRight
-                        font.pixelSize: 12
-                        color: Kirigami.Theme.textColor
-                        anchors.top: instanceSetupPopupUrlLabel.bottom
-                        anchors.topMargin: Kirigami.Units.smallSpacing
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: Mycroft.Units.gridUnit * 2
-                        text: qsTr("HTTP: http://homeassistant.local:8123") + "\n" + qsTr("Websocket: ws://homeassistant.local:8123")
-                    }
-
-                    TextField {
-                        id: instanceSetupPopupUrl
-                        placeholderText: qsTr("http://homeassistant.local:8123 or ws://homeassistant.local:8123")
-                        font.pixelSize: Mycroft.Units.gridUnit * 1.5
-                        color: Kirigami.Theme.textColor
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.top: subTextInstanceSetupPopupUrlLabel.bottom
-                        anchors.topMargin: Mycroft.Units.gridUnit * 0.5
-                        height: Mycroft.Units.gridUnit * 3
-                    }
-
-                    Label {
-                        id: instanceSetupPopupApiKeyLabel
-                        text: qsTr("Home Assistant Instance API Key")
-                        fontSizeMode: Text.Fit
-                        minimumPixelSize: 10
-                        elide: Text.ElideRight
-                        font.pixelSize: Mycroft.Units.gridUnit * 1.5
-                        color: Kirigami.Theme.textColor
-                        anchors.top: instanceSetupPopupUrl.bottom
-                        anchors.topMargin: Kirigami.Units.smallSpacing
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: Mycroft.Units.gridUnit * 2
-                    }
-
-                    TextField {
-                        id: instanceSetupPopupApiKey
-                        placeholderText: qsTr("API Key")
-                        font.pixelSize: Mycroft.Units.gridUnit * 1.5
-                        color: Kirigami.Theme.textColor
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.top: instanceSetupPopupApiKeyLabel.bottom
-                        anchors.topMargin: Mycroft.Units.gridUnit * 0.5
-                        height: Mycroft.Units.gridUnit * 3
-                    }
-
-                    RowLayout {
-                        id: instanceSetupPopupButtons
-                        anchors.top: instanceSetupPopupApiKey.bottom
-                        anchors.topMargin: Kirigami.Units.smallSpacing
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: Mycroft.Units.gridUnit * 3
-
-                        Button {
-                            id: instanceSetupPopupConfirmButton
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-
-                            background: Rectangle {
-                                id: instanceSetupPopupConfirmButtonBackground
-                                color: Kirigami.Theme.highlightColor
-                                radius: Mycroft.Units.gridUnit * 0.5
-                            }
-
-                            contentItem: Item {
-                                RowLayout {
-                                    id: instanceSetupPopupConfirmButtonLayout
-                                    anchors.centerIn: parent
-
-                                    Kirigami.Icon {
-                                        id: instanceSetupPopupConfirmButtonIcon
-                                        Layout.fillHeight: true
-                                        Layout.preferredWidth: height
-                                        Layout.alignment: Qt.AlignVCenter
-                                        source: "answer-correct"
-
-                                        ColorOverlay {
-                                            anchors.fill: parent
-                                            source: parent
-                                            color: Kirigami.Theme.textColor
-                                        }
-                                    }
-
-                                    Kirigami.Heading {
-                                        id: instanceSetupPopupConfirmButtonText
-                                        level: 2
-                                        Layout.fillHeight: true          
-                                        wrapMode: Text.WordWrap
-                                        font.bold: true
-                                        elide: Text.ElideRight
-                                        color: Kirigami.Theme.textColor
-                                        text: qsTr("Confirm")
-                                        verticalAlignment: Text.AlignVCenter
-                                        horizontalAlignment: Text.AlignLeft
-                                    }
-                                }
-                            }
-
-                            onClicked: {
-                                Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.setup.instance", {"url": instanceSetupPopupUrl.text, "api_key": instanceSetupPopupApiKey.text})
-                                instaceSetupPopupBox.close()
-                            }
-
-                            onPressed: {
-                                instanceSetupPopupConfirmButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)    
-                            }
-                            onReleased: {
-                                instanceSetupPopupConfirmButtonBackground.color = Kirigami.Theme.highlightColor
-                            } 
-                        }
-
-                        Button {
-                            id: instanceSetupPopupCancelButton
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-
-                            background: Rectangle {
-                                id: instanceSetupPopupCancelButtonBackground
-                                color: Kirigami.Theme.highlightColor
-                                radius: Mycroft.Units.gridUnit * 0.5
-                            }
-
-                            contentItem: Item {
-                                RowLayout {
-                                    id: instanceSetupPopupCancelButtonLayout
-                                    anchors.centerIn: parent
-
-                                    Kirigami.Icon {
-                                        id: instanceSetupPopupCancelButtonIcon
-                                        Layout.fillHeight: true
-                                        Layout.preferredWidth: height
-                                        Layout.alignment: Qt.AlignVCenter
-                                        source: "window-close-symbolic"
-
-                                        ColorOverlay {
-                                            anchors.fill: parent
-                                            source: parent
-                                            color: Kirigami.Theme.textColor
-                                        }
-                                    }
-
-                                    Kirigami.Heading {
-                                        id: instanceSetupPopupCancelButtonText
-                                        level: 2
-                                        Layout.fillHeight: true          
-                                        wrapMode: Text.WordWrap
-                                        font.bold: true
-                                        elide: Text.ElideRight
-                                        color: Kirigami.Theme.textColor
-                                        text: qsTr("Cancel")
-                                        verticalAlignment: Text.AlignVCenter
-                                        horizontalAlignment: Text.AlignLeft
-                                    }
-                                }
-                            }
-
-                            onClicked: {
-                                instaceSetupPopupBox.close()
-                            }
-
-                            onPressed: {
-                                instanceSetupPopupCancelButtonBackground.color = Qt.darker(Kirigami.Theme.highlightColor, 2)    
-                            }
-                            onReleased: {
-                                instanceSetupPopupCancelButtonBackground.color = Kirigami.Theme.highlightColor
-                            } 
-                        }
-                    }
-                }
-            }
+            width: parent.width * 0.95
+            height: parent.height * 0.95
         }
 
         ItemDelegate {

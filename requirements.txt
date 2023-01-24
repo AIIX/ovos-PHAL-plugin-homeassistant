@@ -1,7 +1,7 @@
 ovos-plugin-manager>=0.0.1
-ovos-utils~=0.0.27a3
+ovos-utils>=0.0.27
 ovos-config~=0.0.5
 mycroft-messagebus-client
 youtube-search
 pytube
-hass-client~=0.1
+websockets

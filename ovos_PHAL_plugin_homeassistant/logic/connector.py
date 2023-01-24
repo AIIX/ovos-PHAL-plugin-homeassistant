@@ -4,20 +4,19 @@ from typing import Optional, List
 import requests
 import json
 import sys
-import asyncio
 
-from hass_client.client import HomeAssistantClient
 from ovos_utils.log import LOG
-
+from ovos_PHAL_plugin_homeassistant.logic.socketclient import HomeAssistantClient
 
 class HomeAssistantConnector:
-    def __init__(self, host, api_key):
+    def __init__(self, host, api_key, enable_debug=False):
         """ Constructor
 
         Args:
             host (str): The host of the home assistant instance.
             api_key (str): The api key
         """
+        self.enable_debug = enable_debug
         self.host = host
         self.api_key = api_key
 
@@ -113,10 +112,10 @@ class HomeAssistantConnector:
             arguments (dict): The arguments to pass to the function.
         """
 
-
 class HomeAssistantRESTConnector(HomeAssistantConnector):
-    def __init__(self, host, api_key):
+    def __init__(self, host, api_key, enable_debug=False):
         super().__init__(host, api_key)
+        self.enable_debug = enable_debug
         self.headers = {'Authorization': 'Bearer ' +
                         self.api_key, 'content-type': 'application/json'}
 
@@ -251,37 +250,33 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
 
 
 class HomeAssistantWSConnector(HomeAssistantConnector):
-    def __init__(self, host, api_key):
+    def __init__(self, host, api_key, enable_debug=False):
         super().__init__(host, api_key)
         if self.host.startswith('http'):
             self.host.replace('http', 'ws', 1)
-        try:
-            self._loop = asyncio.get_event_loop()
-        except RuntimeError:
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            self._loop = asyncio.get_event_loop()
-        self._client: HomeAssistantClient = None
-        self._loop.run_until_complete(self.start_client())
-
-    @property
-    def client(self):
-        if not self._client.connected:
-            LOG.error("Client not connected, re-initializing")
-            self._loop.run_until_complete(self.start_client())
-        return self._client
-
-    async def start_client(self):
-        self._client = self._client or HomeAssistantClient(self.host,
-                                                           self.api_key)
-        await self._client.connect()
+        self.enable_debug = enable_debug
+        self._connection = HomeAssistantClient(self.host, self.api_key)
+        self._connection.connect()
+        
+        # Initialize client instance
+        self.client = self._connection.get_instance_sync()
+        self.client.build_registries_sync()
+        self.client.register_event_listener(self.event_listener)
+        self.client.subscribe_events_sync()
+    
+    def event_listener(self, message):
+        # Todo: Implementation with UI
+        # For now it uses the old states update method
+        pass
 
     @staticmethod
-    def _device_entry_compat(devices: dict):
+    def _device_entry_compat(devices: dict, enable_debug):
         disabled_devices = list()
         for idx, dev in devices.items():
             if dev.get('disabled_by'):
-                LOG.debug(f'Ignoring {dev.get("entity_id")} disabled by '
-                          f'{dev.get("disabled_by")}')
+                if(enable_debug):
+                    LOG.debug(f'Ignoring {dev.get("entity_id")} disabled by '
+                            f'{dev.get("disabled_by")}')
                 disabled_devices.append(idx)
             else:
                 devices[idx].setdefault(
@@ -291,17 +286,18 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
 
     def get_all_devices(self) -> list:
         devices = self.client.entity_registry
-        self._device_entry_compat(devices)
+        self._device_entry_compat(devices, self.enable_debug)
         devices_with_area = self.assign_group_for_devices(devices)
         return list(devices_with_area.values())
 
     def get_device_state(self, entity_id: str) -> dict:
-        message = {'type': 'get_states'}
-        states = self._loop.run_until_complete(
-            self.client.send_command(message))
-        for state in states:
-            if state['entity_id'] == entity_id:
-                return state
+        try:
+            states = self.client.get_states_sync()
+            for state in states:
+                if state['entity_id'] == entity_id:
+                    return state
+        except Exception as e:
+            pass
 
     def set_device_state(self, entity_id: str, state: str, attributes: Optional[dict] = None):
         self.client.set_state(entity_id, state, attributes)
@@ -323,31 +319,34 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         return [d for d in devices if d['attributes'].get(attribute) not in value]
 
     def turn_on(self, device_id, device_type):
-        LOG.debug(f"Turn on {device_id}")
-        self._loop.run_until_complete(
-            self.client.call_service(device_type, 'turn_on',
-                                     {'entity_id': device_id}))
+        if self.enable_debug:
+            LOG.debug(f"Turn on {device_id}")
+        self.client.call_service_sync(device_type, 'turn_on', {'entity_id': device_id})
 
     def turn_off(self, device_id, device_type):
-        LOG.debug(f"Turn off {device_id}")
-        self._loop.run_until_complete(
-            self.client.call_service(device_type, 'turn_off',
-                                     {'entity_id': device_id}))
+        if self.enable_debug:
+            LOG.debug(f"Turn off {device_id}")
+        self.client.call_service_sync(device_type, 'turn_off', {'entity_id': device_id})
 
     def call_function(self, device_id, device_type, function, arguments=None):
         arguments = arguments or dict()
         arguments['entity_id'] = device_id
-        self._loop.run_until_complete(
-            self.client.call_service(device_type, function, arguments))
+        self.client.call_service_sync(device_type, function, arguments)
+
+    def call_command(self, command, arguments=None):
+        response = self.client.send_command_sync(command, arguments)
+        return response
 
     def assign_group_for_devices(self, devices):
-        devices_from_registry = self._loop.run_until_complete(
-            self.client.send_command({'type': 'config/device_registry/list'}))
+        devices_from_registry = self.client.send_command_sync('config/device_registry/list')
 
-        for device_item in devices_from_registry:
+        for device_item in devices_from_registry["result"]:
             for device in devices.values():
                 if device['device_id'] == device_item['id']:
                     device['area_id'] = device_item['area_id']
                     break
 
         return devices
+    
+    def disconnect(self):
+        self._connection.disconnect()

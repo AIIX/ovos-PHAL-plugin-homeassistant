@@ -1,3 +1,5 @@
+import json
+import uuid
 from os.path import dirname, join
 from ovos_utils.log import LOG
 from mycroft_bus_client.message import Message
@@ -14,8 +16,6 @@ from ovos_PHAL_plugin_homeassistant.logic.integration import Integrator
 from ovos_PHAL_plugin_homeassistant.logic.utils import (map_entity_to_device_type,
                                                         check_if_device_type_is_group)
 from ovos_config.config import update_mycroft_config
-from time import sleep
-
 
 class HomeAssistantPlugin(PHALPlugin):
     def __init__(self, bus=None, config=None):
@@ -26,12 +26,17 @@ class HomeAssistantPlugin(PHALPlugin):
                 config (dict): The plugin configuration
         """
         super().__init__(bus=bus, name="ovos-PHAL-plugin-homeassistant", config=config)
+        self.oauth_client_id = None
+        self.munged_id = "ovos-PHAL-plugin-homeassistant_homeassistant-phal-plugin"
+        self.temporary_instance = None
         self.connector = None
         self.registered_devices = []
         self.bus = bus
         self.gui = GUIInterface(bus=self.bus, skill_id=self.name)
         self.integrator = Integrator(self.bus, self.gui)
         self.instance_available = False
+        self.use_ws = False
+        self.enable_debug = self.config.get("enable_debug", False)
         self.device_types = {
             "sensor": HomeAssistantSensor,
             "binary_sensor": HomeAssistantBinarySensor,
@@ -58,6 +63,7 @@ class HomeAssistantPlugin(PHALPlugin):
                     self.handle_get_device_display_list_model)
         self.bus.on("ovos.phal.plugin.homeassistant.call.supported.function",
                     self.handle_call_supported_function)
+        self.bus.on("ovos.phal.plugin.homeassistant.start.oauth.flow", self.handle_start_oauth_flow)
 
         # GUI EVENTS
         self.bus.on("ovos-PHAL-plugin-homeassistant.home",
@@ -81,6 +87,11 @@ class HomeAssistantPlugin(PHALPlugin):
         self.bus.on("configuration.updated", self.init_configuration)
         self.bus.on("configuration.patch", self.init_configuration)
 
+        # LISTEN FOR OAUTH RESPONSE
+        self.bus.on("oauth.app.host.info.response", self.handle_oauth_host_info)
+        self.bus.on("oauth.generate.qr.response", self.handle_qr_oauth_response)
+        self.bus.on(f"oauth.token.response.{self.munged_id}", self.handle_token_oauth_response)
+
         self.init_configuration()
 
 # SETUP INSTANCE SUPPORT
@@ -95,14 +106,19 @@ class HomeAssistantPlugin(PHALPlugin):
                 bool: True if the connection is valid, False otherwise
         """
         try:
-            if self.config.get('use_websocket'):
-                LOG.info("Using websocket connection")
-                validator = HomeAssistantWSConnector(host, api_key)
+            if self.use_ws:
+                validator = HomeAssistantWSConnector(host, api_key, self.enable_debug)            
             else:
-                validator = HomeAssistantRESTConnector(host, api_key)
+                validator = HomeAssistantRESTConnector(host, api_key, self.enable_debug)
 
             validator.get_all_devices()
+
+            if self.use_ws:
+                if validator.client:
+                    validator.disconnect()
+
             return True
+
         except Exception as e:
             LOG.error(e)
             return False
@@ -118,15 +134,7 @@ class HomeAssistantPlugin(PHALPlugin):
 
         if host and key:
             if host.startswith("ws") or host.startswith("wss"):
-                config_patch = {
-                        "PHAL": {
-                            "ovos-PHAL-plugin-homeassistant": {
-                                "use_websocket": True
-                            }
-                        }
-                }
-                update_mycroft_config(config=config_patch, bus=self.bus)
-                sleep(2) # wait for config to be updated
+                self.use_ws = True
 
             if self.validate_instance_connection(host, key):
                 self.config["host"] = host
@@ -149,21 +157,24 @@ class HomeAssistantPlugin(PHALPlugin):
         """ Initialize instance configuration """
         configuration_host = self.config.get("host", "")
         configuration_api_key = self.config.get("api_key", "")
+        if configuration_host.startswith("ws") or configuration_host.startswith("wss"):
+            self.use_ws = True
+        
         if not self.config.get("use_group_display"):
             self.config["use_group_display"] = False
 
         if configuration_host != "" and configuration_api_key != "":
             self.instance_available = True
-            if self.config.get('use_websocket'):
+            if self.use_ws:
                 self.connector = HomeAssistantWSConnector(configuration_host,
-                                                          configuration_api_key)
+                                                          configuration_api_key, self.enable_debug)
             else:
                 self.connector = HomeAssistantRESTConnector(
-                    configuration_host, configuration_api_key)
+                    configuration_host, configuration_api_key, self.enable_debug)
             self.devices = self.connector.get_all_devices()
             self.registered_devices = []
             self.build_devices()
-            self.gui["use_websocket"] = self.config.get("use_websocket", False)
+            self.gui["use_websocket"] = self.use_ws
             self.gui["instanceAvailable"] = True
             self.bus.emit(Message("ovos.phal.plugin.homeassistant.ready"))
         else:
@@ -185,8 +196,10 @@ class HomeAssistantPlugin(PHALPlugin):
                     device_icon = f"mdi:{device_type}"
                     device_state = device.get("state", None)
                     device_area = device.get("area_id", None)
-                    LOG.info(
-                        f"Device added: {device_name} - {device_type} - {device_area}")
+                    if self.enable_debug:
+                        LOG.info(
+                            f"Device added: {device_name} - {device_type} - {device_area}")
+
                     device_attributes = device.get("attributes", {})
                     if device_type in self.device_types:
                         self.registered_devices.append(self.device_types[device_type](
@@ -396,7 +409,7 @@ class HomeAssistantPlugin(PHALPlugin):
                 message (Message): The message object
         """
         if self.instance_available:
-            self.gui["use_websocket"] = self.config.get("use_websocket", False)
+            self.gui["use_websocket"] = self.use_ws
             if not self.config.get("use_group_display"):
                 display_list_model = {
                     "items": self.build_display_dashboard_device_model()}
@@ -420,8 +433,9 @@ class HomeAssistantPlugin(PHALPlugin):
             self.gui["use_group_display"] = self.config.get("use_group_display", False)
             self.gui.show_page(page, override_idle=True)
 
-        LOG.info("Using group display")
-        LOG.info(self.config["use_group_display"])
+        if self.enable_debug:
+            LOG.debug("Using group display")
+            LOG.debug(self.config["use_group_display"])
 
     def handle_close_dashboard(self, message):
         """ Handle the close dashboard message
@@ -474,7 +488,7 @@ class HomeAssistantPlugin(PHALPlugin):
             Args:
                 message (Message): The message object
         """
-        area = message.data.get("area", None)
+        area = message.data.get("area_type", None)
         if area is not None:
             self.gui["areaDashboardModel"] = {
                 "items": self.build_display_area_devices_model(area)}
@@ -499,7 +513,6 @@ class HomeAssistantPlugin(PHALPlugin):
                     "ovos-PHAL-plugin-homeassistant": {
                         "host": self.config.get("host"),
                         "api_key": self.config.get("api_key"),
-                        "use_websocket": self.config.get("use_websocket", False),
                         "use_group_display": use_group_display
                     }
                 }
@@ -507,3 +520,79 @@ class HomeAssistantPlugin(PHALPlugin):
             update_mycroft_config(config=config_patch, bus=self.bus)
             self.gui["use_group_display"] = self.config.get("use_group_display")
             self.handle_show_dashboard()
+
+# OAuth QR Code Flow Handlers
+    def request_host_info_from_oauth(self):
+        self.bus.emit(Message("oauth.get.app.host.info"))
+
+    def handle_oauth_host_info(self, message):
+        host = message.data.get("host", None)
+        port = message.data.get("port", None)
+        self.oauth_client_id = f"http://{host}:{port}"
+
+        if self.temporary_instance:
+            self.oauth_register()
+            self.start_oauth_flow()
+            
+    def handle_start_oauth_flow(self, message):
+        """ Handle the start oauth flow message
+
+            Args:
+                message (Message): The message object
+        """
+        instance = message.data.get("instance", None)
+        if instance:
+            self.temporary_instance = instance
+            self.request_host_info_from_oauth()
+
+    def oauth_register(self):
+        """ Register the phal plugin with the oauth service """
+        host = self.temporary_instance.replace("ws://", "http://").replace("wss://", "https://")
+        auth_endpoint = f"{host}/auth/authorize"
+        token_endpoint = f"{host}/auth/token"
+        self.bus.emit(Message("oauth.register", {
+            "client_id": self.oauth_client_id,
+            "skill_id": "ovos-PHAL-plugin-homeassistant",
+            "app_id": "homeassistant-phal-plugin",
+            "auth_endpoint": auth_endpoint,
+            "token_endpoint": token_endpoint,
+            "shell_integration": False,
+            "refresh_endpoint": "",
+        }))
+
+    def start_oauth_flow(self):
+        host = self.temporary_instance.replace("ws://", "http://").replace("wss://", "https://")
+        app_id = "homeassistant-phal-plugin"
+        skill_id = "ovos-PHAL-plugin-homeassistant"
+        self.bus.emit(Message("oauth.generate.qr.request", {
+            "app_id": app_id,
+            "skill_id": skill_id
+        }))
+
+    def handle_qr_oauth_response(self, message):
+        qr_code_url = message.data.get("qr", None)
+        self.gui.send_event("ovos.phal.plugin.homeassistant.oauth.qr.update", {
+            "qr": qr_code_url
+        })
+
+    def handle_token_oauth_response(self, message):
+        response = message.data
+        access_token = response.get("access_token", None)
+        if access_token:
+            self.get_long_term_token(access_token)
+
+    def get_long_term_token(self, short_term_token):
+        instance = self.temporary_instance.replace("http://", "ws://").replace("https://", "wss://")
+        token = short_term_token
+        wsClient = HomeAssistantWSConnector(instance, token, self.enable_debug)
+        client_name = "ovos-PHAL-plugin-homeassistant-" + str(uuid.uuid4().hex)[:4]
+        token_response = wsClient.call_command("auth/long_lived_access_token", {"client_name": client_name, "lifespan": 1825})
+
+        if wsClient.client:
+            wsClient.disconnect()
+
+        if token_response:
+            if token_response["success"]:
+                long_term_token = token_response["result"]
+                self.gui.send_event("ovos.phal.plugin.homeassistant.oauth.success", {})
+                self.setup_configuration(Message("ovos.phal.plugin.homeassistant.setup", {"url": instance, "api_key": long_term_token}))
