@@ -446,7 +446,7 @@ Mycroft.Delegate {
                 anchors.bottom: parent.bottom
                 visible: dashboardRoot.horizontalMode ? 1 : 0
                 property bool leftButtonActive: tabBarFlickableObject.contentX > 0 ? 1 : 0
-                property bool rightButtonActive: tabBarFlickableObject.contentX < tabBarFlickableObject.contentWidth - tabBarFlickableObject.width - Mycroft.Units.gridUnit * 12 ? 1 : 0
+                property bool rightButtonActive: tabBarFlickableObject.contentX < tabBarFlickableObject.contentWidth - tabBarFlickableObject.width ? 1 : 0
 
                 Button {
                     id: arrowLeftTabBarFlicker
@@ -458,6 +458,7 @@ Mycroft.Delegate {
                     opacity: enabled ? 1 : 0.5
                     
                     background: Rectangle {
+                        id: arrowLeftTabBarFlickerBackground
                         color: "transparent"
                     }
 
@@ -476,6 +477,18 @@ Mycroft.Delegate {
                             tabBarFlickableObject.contentX -= Mycroft.Units.gridUnit * 12
                         }
                     }
+
+                    onPressAndHold: {
+                        tabBarFlickableObject.contentX = 0
+                        arrowLeftTabBarFlickerBackground.color = "transparent"
+                    }
+
+                    onPressed: {
+                        arrowLeftTabBarFlickerBackground.color = Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.5)
+                    }
+                    onReleased: {
+                        arrowLeftTabBarFlickerBackground.color = "transparent"
+                    }
                 }
 
                 Flickable {
@@ -487,7 +500,7 @@ Mycroft.Delegate {
                     height: parent.height
                     anchors.bottom: parent.bottom
                     flickableDirection: Flickable.HorizontalFlick
-                    contentWidth: parent.width * 2
+                    contentWidth: tabBarModelRepeater.count * Mycroft.Units.gridUnit * 12
                     contentHeight: height
                     clip: true
 
@@ -533,6 +546,7 @@ Mycroft.Delegate {
                     opacity: enabled ? 1 : 0.5
 
                     background: Rectangle {
+                        id: arrowRightTabBarFlickerBackground
                         color: "transparent"
                     }
 
@@ -550,6 +564,18 @@ Mycroft.Delegate {
                         if(tabBarFlickableObject.contentX < tabBarFlickableObject.contentWidth - tabBarFlickableObject.width) {
                             tabBarFlickableObject.contentX += Mycroft.Units.gridUnit * 12
                         }
+                    }
+
+                    onPressAndHold: {
+                        tabBarFlickableObject.contentX = tabBarFlickableObject.contentWidth - tabBarFlickableObject.width
+                        arrowRightTabBarFlickerBackground.color = "transparent"
+                    }
+
+                    onPressed: {
+                        arrowRightTabBarFlickerBackground.color = Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.5)
+                    }
+                    onReleased: {
+                        arrowRightTabBarFlickerBackground.color = "transparent"
                     }
                 }
             }
