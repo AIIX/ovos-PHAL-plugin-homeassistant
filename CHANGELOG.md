@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/f92d2168b7053c3a58430237bfb9d9a4dcb0ae67...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a2...HEAD)
+
+**Merged pull requests:**
+
+- Consume events for websocket connections instead of polling [\#6](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/6) ([AIIX](https://github.com/AIIX))
+
+## [V0.0.0a2](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0a2) (2023-02-02)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/f92d2168b7053c3a58430237bfb9d9a4dcb0ae67...V0.0.0a2)
 
 **Merged pull requests:**
 
