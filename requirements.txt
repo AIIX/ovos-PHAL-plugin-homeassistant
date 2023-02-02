@@ -5,3 +5,4 @@ mycroft-messagebus-client
 youtube-search
 pytube
 websockets
+ovos-PHAL-plugin-oauth
