@@ -44,12 +44,14 @@ Mycroft.Delegate {
         repeat: true
         running: dashboardSwipeView.currentIndex > 0 ? 1 : 0
         onTriggered: {
-            var dev_type = tabBarModel[bar.currentIndex].type
-            if(dev_type != "main") {
-                if (dashboardRoot.useGroupDisplay) {
-                    Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.update.area.dashboard", {"area_type": dev_type})
-                } else {
-                    Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.update.device.dashboard", {"device_type": dev_type})
+            if(!dashboardRoot.useWebsocket){
+                var dev_type = tabBarModel[bar.currentIndex].type
+                if(dev_type != "main") {
+                    if (dashboardRoot.useGroupDisplay) {
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.update.area.dashboard", {"area_type": dev_type})
+                    } else {
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.update.device.dashboard", {"device_type": dev_type})
+                    }
                 }
             }
         }
@@ -87,6 +89,16 @@ Mycroft.Delegate {
         case "ovos.phal.plugin.homeassistant.oauth.success":
             instaceSetupPopupBox.close()
             break
+        case "ovos.phal.plugin.homeassistant.device.updated":
+            var dev_type = tabBarModel[bar.currentIndex].type
+            if(dev_type != "main") {
+                if (dashboardRoot.useGroupDisplay) {
+                    Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.update.area.dashboard", {"area_type": dev_type})
+                } else {
+                    Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.update.device.dashboard", {"device_type": dev_type})
+                }
+            }
+            break
         }
     }
 
@@ -114,7 +126,9 @@ Mycroft.Delegate {
             devicesGridView.model = deviceDashboardModel.items
 
             if(dashboardSwipeView.currentIndex > 0) {
-                pollTimer.restart()
+                if(!dashboardRoot.useWebsocket){
+                    pollTimer.restart()
+                }
             }
         }
     }
@@ -124,7 +138,9 @@ Mycroft.Delegate {
             devicesGridView.model = areaDashboardModel.items
 
             if(dashboardSwipeView.currentIndex > 0) {
-                pollTimer.restart()
+                if(!dashboardRoot.useWebsocket){
+                    pollTimer.restart()
+                }
             }
         }
     }
@@ -170,7 +186,7 @@ Mycroft.Delegate {
                             source: HelperJS.isLight(Kirigami.Theme.backgroundColor) ? Qt.resolvedUrl("icons/ha_icon_dark.svg") : Qt.resolvedUrl("icons/ha_icon_light.svg")
                         }
                     }
-                    
+
                     Rectangle {
                         id: pageTitleRect
                         anchors.top: parent.top
@@ -393,7 +409,7 @@ Mycroft.Delegate {
                     }
                 }
             }
-            
+
             Item {
                 id: deviceDashboard
 
@@ -432,7 +448,7 @@ Mycroft.Delegate {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            
+
             Kirigami.Separator {
                 anchors.top: parent.top
                 anchors.left: parent.left
@@ -456,7 +472,7 @@ Mycroft.Delegate {
                     height: Mycroft.Units.gridUnit * 3
                     enabled: bottomBarAreaTabsContainer.leftButtonActive ? 1 : 0
                     opacity: enabled ? 1 : 0.5
-                    
+
                     background: Rectangle {
                         id: arrowLeftTabBarFlickerBackground
                         color: "transparent"
@@ -603,7 +619,7 @@ Mycroft.Delegate {
                             Layout.preferredWidth: height
                             Layout.alignment: Qt.AlignVCenter
                             source: "dashboard-show"
-                            
+
                             ColorOverlay {
                                 anchors.fill: parent
                                 source: parent
@@ -655,7 +671,7 @@ Mycroft.Delegate {
             background: Rectangle {
                 color: Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g, Kirigami.Theme.backgroundColor.b, 0.9)
             }
-            
+
             DeviceControlsLoader {
                 id: deviceControlsLoader
                 horizontalMode: dashboardRoot.horizontalMode

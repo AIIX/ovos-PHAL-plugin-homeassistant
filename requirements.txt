@@ -6,3 +6,4 @@ youtube-search
 pytube
 websockets
 ovos-PHAL-plugin-oauth
+nested-lookup

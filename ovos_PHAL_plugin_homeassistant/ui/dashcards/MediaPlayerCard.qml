@@ -100,7 +100,7 @@ Control {
                         radius: 8
                     }
 
-                    contentItem: Item { 
+                    contentItem: Item {
                         Kirigami.Icon {
                             width: parent.width > parent.height ? parent.height / 2 : parent.width / 3
                             height: width
@@ -165,7 +165,7 @@ Control {
                     }
 
                     onClicked: {
-                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", { 
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
                             "device_id": device.id,
                             "function_name": "media_previous_track",
                             "function_args": {}
@@ -183,8 +183,8 @@ Control {
                     id: playButton
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    visible: device.state == "playing" || device.state == "paused"  
-                    enabled: device.state == "playing" || device.state == "paused"          
+                    visible: device.state == "playing" || device.state == "paused"
+                    enabled: device.state == "playing" || device.state == "paused"
 
                     background: Rectangle {
                         Kirigami.Theme.inherit: false
@@ -237,7 +237,7 @@ Control {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     visible: device.state == "playing" || device.state == "paused"
-                    enabled: device.state == "playing" || device.state == "paused"      
+                    enabled: device.state == "playing" || device.state == "paused"
 
                     background: Rectangle {
                         Kirigami.Theme.inherit: false
@@ -263,7 +263,7 @@ Control {
                     }
 
                     onClicked: {
-                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", { 
+                        Mycroft.MycroftController.sendRequest("ovos.phal.plugin.homeassistant.call.supported.function", {
                             "device_id": device.id,
                             "function": "media_next_track"
                         })
@@ -277,7 +277,7 @@ Control {
                 }
             }
 
-            RowLayout {
+            Item {
                 id: volumeSliderRow
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -286,8 +286,10 @@ Control {
 
                 Button {
                     id: selectMediaButton
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    anchors.left: parent.left
+                    width: parent.width - Mycroft.Units.gridUnit * 7
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
 
                     background: Rectangle {
                         id: selectMediaButtonBackground
@@ -363,10 +365,12 @@ Control {
 
                 Button {
                     id: lowerVolumeButton
-                    Layout.preferredWidth: Mycroft.Units.gridUnit * 3
-                    Layout.fillHeight: true
-                    visible: device.state == "playing" || device.state == "paused" ? 1 : 0
-                    enabled: device.state == "playing" || device.state == "paused" ? 1 : 0   
+                    anchors.left: selectMediaButton.right
+                    anchors.leftMargin: Mycroft.Units.gridUnit * 0.5
+                    width: Mycroft.Units.gridUnit * 3
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    enabled: device.state == "playing" || device.state == "paused" ? 1 : 0
 
                     background: Rectangle {
                         Kirigami.Theme.inherit: false
@@ -407,10 +411,12 @@ Control {
 
                 Button {
                     id: higherVolumeButton
-                    Layout.preferredWidth: Mycroft.Units.gridUnit * 3
-                    Layout.fillHeight: true
-                    visible: device.state == "playing" || device.state == "paused" ? 1 : 0
-                    enabled: device.state == "playing" || device.state == "paused" ? 1 : 0   
+                    anchors.left: lowerVolumeButton.right
+                    anchors.leftMargin: Mycroft.Units.gridUnit * 0.5
+                    width: Mycroft.Units.gridUnit * 3
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    enabled: device.state == "playing" || device.state == "paused" ? 1 : 0
 
                     background: Rectangle {
                         Kirigami.Theme.inherit: false

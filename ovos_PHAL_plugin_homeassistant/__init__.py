@@ -1,4 +1,3 @@
-import json
 import uuid
 from os.path import dirname, join
 from ovos_utils.log import LOG
@@ -19,7 +18,7 @@ from ovos_config.config import update_mycroft_config
 
 class HomeAssistantPlugin(PHALPlugin):
     def __init__(self, bus=None, config=None):
-        """ Initialize the plugin 
+        """ Initialize the plugin
 
             Args:
                 bus (MycroftBusClient): The Mycroft bus client
@@ -107,7 +106,7 @@ class HomeAssistantPlugin(PHALPlugin):
         """
         try:
             if self.use_ws:
-                validator = HomeAssistantWSConnector(host, api_key, self.enable_debug)            
+                validator = HomeAssistantWSConnector(host, api_key, self.enable_debug)
             else:
                 validator = HomeAssistantRESTConnector(host, api_key, self.enable_debug)
 
@@ -130,7 +129,7 @@ class HomeAssistantPlugin(PHALPlugin):
                 message (Message): The message object
         """
         host = message.data.get("url", "")
-        key = message.data.get("api_key", "")            
+        key = message.data.get("api_key", "")
 
         if host and key:
             if host.startswith("ws") or host.startswith("wss"):
@@ -159,7 +158,7 @@ class HomeAssistantPlugin(PHALPlugin):
         configuration_api_key = self.config.get("api_key", "")
         if configuration_host.startswith("ws") or configuration_host.startswith("wss"):
             self.use_ws = True
-        
+
         if not self.config.get("use_group_display"):
             self.config["use_group_display"] = False
 
@@ -204,7 +203,7 @@ class HomeAssistantPlugin(PHALPlugin):
                     if device_type in self.device_types:
                         self.registered_devices.append(self.device_types[device_type](
                             self.connector, device_id, device_icon, device_name,
-                            device_state, device_attributes, device_area))
+                            device_state, device_attributes, device_area, self.device_updated))
                     else:
                         LOG.warning(f"Device type {device_type} not supported")
                 else:
@@ -286,13 +285,13 @@ class HomeAssistantPlugin(PHALPlugin):
         return device_type_list_model
 
     def build_display_area_devices_model(self, area):
-        """ Build the devices model based on the area 
+        """ Build the devices model based on the area
 
         Args:
             area (String): The area to build the model for
 
         Returns:
-            dict: The device model        
+            dict: The device model
         """
         area_list_model = []
         for device in self.registered_devices:
@@ -310,7 +309,12 @@ class HomeAssistantPlugin(PHALPlugin):
             Args:
                 message (Message): The message object
         """
-        self.bus.emit(message.response(data=self.registered_devices))
+        # build a plain list of devices
+        device_list = []
+        for device in self.registered_devices:
+            device_list.append(device.get_device_display_model())
+
+        self.bus.emit(message.response(data=device_list))
 
     def handle_get_device(self, message):
         device_id = message.data.get("device_id", None)
@@ -322,7 +326,7 @@ class HomeAssistantPlugin(PHALPlugin):
         self.bus.emit(message.response(data=None))
 
     def handle_turn_on(self, message):
-        """ Handle the turn on message 
+        """ Handle the turn on message
 
             Args:
                 message (Message): The message object
@@ -391,7 +395,7 @@ class HomeAssistantPlugin(PHALPlugin):
         self.bus.emit(message.response(data=None))
 
     def handle_get_device_display_list_model(self, message):
-        """ Handle the get device display list model message 
+        """ Handle the get device display list model message
 
             Args:
                 message (Message): The message object
@@ -403,7 +407,7 @@ class HomeAssistantPlugin(PHALPlugin):
 
 # GUI INTERFACE HANDLERS
     def handle_show_dashboard(self, message=None):
-        """ Handle the show dashboard message 
+        """ Handle the show dashboard message
 
             Args:
                 message (Message): The message object
@@ -446,7 +450,7 @@ class HomeAssistantPlugin(PHALPlugin):
         self.gui.release()
 
     def handle_show_device_dashboard(self, message):
-        """ Handle the show device dashboard message 
+        """ Handle the show device dashboard message
 
             Args:
                 message (Message): The message object
@@ -459,7 +463,7 @@ class HomeAssistantPlugin(PHALPlugin):
                                 "dash_type": "device"})
 
     def handle_show_area_dashboard(self, message):
-        """ Handle the show area dashboard message 
+        """ Handle the show area dashboard message
 
             Args:
                 message (Message): The message object
@@ -472,7 +476,7 @@ class HomeAssistantPlugin(PHALPlugin):
                                 "dash_type": "area"})
 
     def handle_update_device_dashboard(self, message):
-        """ Handle the update device dashboard message 
+        """ Handle the update device dashboard message
 
             Args:
                 message (Message): The message object
@@ -500,14 +504,14 @@ class HomeAssistantPlugin(PHALPlugin):
                 message (Message): The message object
         """
         group_settings = message.data.get("use_group_display", None)
-        if group_settings is not None:            
+        if group_settings is not None:
             if group_settings == True:
                 use_group_display = True
                 self.config["use_group_display"] = use_group_display
-            else: 
+            else:
                 use_group_display = False
                 self.config["use_group_display"] = use_group_display
-    
+
             config_patch = {
                 "PHAL": {
                     "ovos-PHAL-plugin-homeassistant": {
@@ -533,7 +537,7 @@ class HomeAssistantPlugin(PHALPlugin):
         if self.temporary_instance:
             self.oauth_register()
             self.start_oauth_flow()
-            
+
     def handle_start_oauth_flow(self, message):
         """ Handle the start oauth flow message
 
@@ -596,3 +600,15 @@ class HomeAssistantPlugin(PHALPlugin):
                 long_term_token = token_response["result"]
                 self.gui.send_event("ovos.phal.plugin.homeassistant.oauth.success", {})
                 self.setup_configuration(Message("ovos.phal.plugin.homeassistant.setup", {"url": instance, "api_key": long_term_token}))
+
+# EVENT SIGNAL ON DEVICE UPDATE
+    def device_updated(self, device_id):
+        """Send a device updated signal to the GUI.
+        It can request a new display model once it receives this signal.
+
+        Args:
+            device (dict): The device that was updated.
+        """
+        # GUI only event as we don't want to flood the GUI bus
+        self.gui.send_event("ovos.phal.plugin.homeassistant.device.updated", {"device_id": device_id})
+        self.bus.emit(Message("ovos.phal.plugin.homeassistant.device.state.updated"))
