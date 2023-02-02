@@ -7,6 +7,7 @@ import sys
 
 from ovos_utils.log import LOG
 from ovos_PHAL_plugin_homeassistant.logic.socketclient import HomeAssistantClient
+import nested_lookup
 
 class HomeAssistantConnector:
     def __init__(self, host, api_key, enable_debug=False):
@@ -19,6 +20,7 @@ class HomeAssistantConnector:
         self.enable_debug = enable_debug
         self.host = host
         self.api_key = api_key
+        self.event_listeners = {}
 
     @abstractmethod
     def get_all_devices(self) -> List[dict]:
@@ -112,12 +114,24 @@ class HomeAssistantConnector:
             arguments (dict): The arguments to pass to the function.
         """
 
+    @abstractmethod
+    def register_callback(self, device_id, callback):
+        """ Register a callback for device events.
+
+        Args:
+            device_id (str): The id of the device.
+            callback (function): The callback to call.
+        """
+
 class HomeAssistantRESTConnector(HomeAssistantConnector):
     def __init__(self, host, api_key, enable_debug=False):
         super().__init__(host, api_key)
         self.enable_debug = enable_debug
         self.headers = {'Authorization': 'Bearer ' +
                         self.api_key, 'content-type': 'application/json'}
+
+    def register_callback(self, device_id, callback):
+        self.event_listeners[device_id] = callback
 
     def get_all_devices(self):
         """ Get all devices from home assistant. """
@@ -140,12 +154,12 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
             sys.exit(1)
 
     def set_device_state(self, entity_id, state, attributes=None):
-        """ Set the state of a device. 
+        """ Set the state of a device.
 
         Args:
             entity_id (str): The id of the device.
             state (str): The state to set.
-            attributes (dict): The attributes to set. 
+            attributes (dict): The attributes to set.
         """
         url = self.host + "/api/states/" + entity_id
         payload = {'state': state, 'attributes': attributes}
@@ -158,7 +172,7 @@ class HomeAssistantRESTConnector(HomeAssistantConnector):
             sys.exit(1)
 
     def get_all_devices_with_type(self, device_type):
-        """ Get all devices with a specific type. 
+        """ Get all devices with a specific type.
 
         Args:
             device_type (str): The type of the device.
@@ -257,17 +271,22 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         self.enable_debug = enable_debug
         self._connection = HomeAssistantClient(self.host, self.api_key)
         self._connection.connect()
-        
+
         # Initialize client instance
         self.client = self._connection.get_instance_sync()
         self.client.build_registries_sync()
         self.client.register_event_listener(self.event_listener)
         self.client.subscribe_events_sync()
-    
+
+    def register_callback(self, device_id, callback):
+        self.event_listeners[device_id] = callback
+
     def event_listener(self, message):
-        # Todo: Implementation with UI
-        # For now it uses the old states update method
-        pass
+        entity_ids = nested_lookup.nested_lookup('entity_id', message)
+        if entity_ids:
+            entity_id = entity_ids[0]
+            if entity_id in self.event_listeners:
+                self.event_listeners[entity_id](message)
 
     @staticmethod
     def _device_entry_compat(devices: dict, enable_debug):
@@ -347,6 +366,6 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
                     break
 
         return devices
-    
+
     def disconnect(self):
         self._connection.disconnect()
