@@ -26,7 +26,7 @@ ItemDelegate {
     }            
 
     contentItem: Item {
-
+        
         ColumnLayout {
             anchors.fill: parent
 
@@ -67,6 +67,8 @@ ItemDelegate {
                     case "sensor": return "../dashcards/SensorCard.qml"
                     case "light": return "../dashcards/LightCard.qml"
                     case "vacuum": return "../dashcards/VacuumCard.qml"
+                    case "camera": return "../dashcards/CameraCard.qml"
+                    case "switch": return "../dashcards/SwitchCard.qml"
                 }
             }
         }
