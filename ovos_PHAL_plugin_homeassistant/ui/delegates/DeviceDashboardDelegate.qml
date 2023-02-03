@@ -6,6 +6,7 @@ import Mycroft 1.0 as Mycroft
 import QtGraphicalEffects 1.0
 
 ItemDelegate {
+    id: deviceDelegate
     property var deviceType: modelData.type
     Layout.preferredWidth: deviceDashboardLayout.cellWidth
     Layout.preferredHeight: deviceDashboardLayout.cellHeight
@@ -23,7 +24,9 @@ ItemDelegate {
     background: Rectangle {
         color: Kirigami.Theme.backgroundColor
         radius: 10
-    }            
+        border.width: deviceDelegate.activeFocus ? 2 : 0
+        border.color: deviceDelegate.activeFocus ? Kirigami.Theme.highlightColor : "transparent"
+    }
 
     contentItem: Item {
         
