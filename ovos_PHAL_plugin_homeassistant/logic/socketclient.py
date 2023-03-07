@@ -72,6 +72,10 @@ class HomeAssistantClient:
     async def listen(self):
         while self.websocket is not None:
             message = await self.websocket.recv()
+            LOG.debug(message)
+            if isinstance(message, list):
+                LOG.warning(f"expected json string, got: {message}")
+                continue
             message = json.loads(message)
             if message.get("type") == "event":
                 if self.event_listener is not None:
