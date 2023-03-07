@@ -29,6 +29,9 @@ class HomeAssistantClient:
     async def authenticate(self):
         await self.websocket.send(f'{{"type": "auth", "access_token": "{self.token}"}}')
         message = await self.websocket.recv()
+        LOG.debug(message)
+        if isinstance(message, list):
+            LOG.warning(f"expected json string, got: {message}")
         message = json.loads(message)
         if message.get("type") == "auth_ok":
             self.authenticated = True
