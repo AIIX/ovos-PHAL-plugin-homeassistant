@@ -46,6 +46,9 @@ class HomeAssistantClient:
             # Wait for the auth_required message
             message = await self.websocket.recv()
             LOG.debug(message)
+            if isinstance(message, list):
+                LOG.warning(f"expected json string, got: {message}")
+                return
             message = json.loads(message)
             if message.get("type") == "auth_required":
                 await self.authenticate()
