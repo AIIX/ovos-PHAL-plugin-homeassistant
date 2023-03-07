@@ -6,6 +6,7 @@ import requests
 import websockets
 from ovos_utils.log import LOG
 
+
 class HomeAssistantClient:
     def __init__(self, url, token):
         self.url = url
@@ -44,6 +45,7 @@ class HomeAssistantClient:
 
             # Wait for the auth_required message
             message = await self.websocket.recv()
+            LOG.debug(message)
             message = json.loads(message)
             if message.get("type") == "auth_required":
                 await self.authenticate()
@@ -229,7 +231,7 @@ class HomeAssistantClient:
 
     def run(self):
         self.loop.run_until_complete(self._connect())
-        LOG.info(self.loop.is_running())
+        LOG.info(f"self.loop.is_running={self.loop.is_running()}")
 
     def connect(self):
         self.thread.start()
