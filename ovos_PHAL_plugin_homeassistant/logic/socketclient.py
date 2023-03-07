@@ -57,7 +57,7 @@ class HomeAssistantClient:
             else:
                 raise Exception("Expected auth_required message")
         except Exception as e:
-            LOG.error(e)
+            LOG.exception(e)
             await self._disconnect()
             return
 
