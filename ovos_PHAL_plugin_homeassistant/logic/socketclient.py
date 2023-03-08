@@ -76,7 +76,8 @@ class HomeAssistantClient:
                 LOG.warning(f"expected json string, got: {message}")
                 continue
             message = json.loads(message)
-            LOG.debug(f"Received message with keys: {message.keys()}")
+            # Below log will print a state update for each device periodically
+            # LOG.debug(f"Received message with keys: {message.keys()}")
             if message.get("type") == "event":
                 if self.event_listener is not None:
                     self.event_listener(message)
