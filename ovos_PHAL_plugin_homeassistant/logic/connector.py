@@ -287,9 +287,12 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         entity_ids = nested_lookup.nested_lookup('entity_id', message)
         if entity_ids:
             entity_id = entity_ids[0]
-            if not isinstance(entity_id, str):
-                LOG.error(f"Expected str, got: {entity_id}")
-            if entity_id in self.event_listeners:
+            if isinstance(entity_id, list):
+                # This is a group that contains multiple entity_ids
+                for eid in entity_id:
+                    if eid in self.event_listeners:
+                        self.event_listeners[eid](message)
+            elif entity_id in self.event_listeners:
                 self.event_listeners[entity_id](message)
 
     @staticmethod
