@@ -9,6 +9,7 @@ from ovos_utils.log import LOG
 from ovos_PHAL_plugin_homeassistant.logic.socketclient import HomeAssistantClient
 import nested_lookup
 
+
 class HomeAssistantConnector:
     def __init__(self, host, api_key, enable_debug=False):
         """ Constructor
@@ -122,6 +123,7 @@ class HomeAssistantConnector:
             device_id (str): The id of the device.
             callback (function): The callback to call.
         """
+
 
 class HomeAssistantRESTConnector(HomeAssistantConnector):
     def __init__(self, host, api_key, enable_debug=False):
@@ -285,7 +287,12 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
         entity_ids = nested_lookup.nested_lookup('entity_id', message)
         if entity_ids:
             entity_id = entity_ids[0]
-            if entity_id in self.event_listeners:
+            if isinstance(entity_id, list):
+                # This is a group that contains multiple entity_ids
+                for eid in entity_id:
+                    if eid in self.event_listeners:
+                        self.event_listeners[eid](message)
+            elif entity_id in self.event_listeners:
                 self.event_listeners[entity_id](message)
 
     @staticmethod
@@ -319,7 +326,9 @@ class HomeAssistantWSConnector(HomeAssistantConnector):
             pass
 
     def set_device_state(self, entity_id: str, state: str, attributes: Optional[dict] = None):
-        self.client.set_state(entity_id, state, attributes)
+        LOG.debug(f"Handle request to modify entity: {entity_id}")
+        resp = self.client.set_state(entity_id, state, attributes)
+        LOG.debug(f"Client resp={resp}")
 
     def get_all_devices_with_type(self, device_type):
         devices = self.get_all_devices()
