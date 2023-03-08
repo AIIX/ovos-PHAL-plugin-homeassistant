@@ -6,6 +6,7 @@ import requests
 import websockets
 from ovos_utils.log import LOG
 
+
 class HomeAssistantClient:
     def __init__(self, url, token):
         self.url = url
@@ -28,6 +29,9 @@ class HomeAssistantClient:
     async def authenticate(self):
         await self.websocket.send(f'{{"type": "auth", "access_token": "{self.token}"}}')
         message = await self.websocket.recv()
+        LOG.debug(message)
+        if isinstance(message, list):
+            LOG.warning(f"expected json string, got: {message}")
         message = json.loads(message)
         if message.get("type") == "auth_ok":
             self.authenticated = True
@@ -44,6 +48,10 @@ class HomeAssistantClient:
 
             # Wait for the auth_required message
             message = await self.websocket.recv()
+            LOG.debug(message)
+            if isinstance(message, list):
+                LOG.warning(f"expected json string, got: {message}")
+                return
             message = json.loads(message)
             if message.get("type") == "auth_required":
                 await self.authenticate()
@@ -52,7 +60,7 @@ class HomeAssistantClient:
             else:
                 raise Exception("Expected auth_required message")
         except Exception as e:
-            LOG.error(e)
+            LOG.exception(e)
             await self._disconnect()
             return
 
@@ -64,7 +72,12 @@ class HomeAssistantClient:
     async def listen(self):
         while self.websocket is not None:
             message = await self.websocket.recv()
+            if isinstance(message, list):
+                LOG.warning(f"expected json string, got: {message}")
+                continue
             message = json.loads(message)
+            # Below log will print a state update for each device periodically
+            # LOG.debug(f"Received message with keys: {message.keys()}")
             if message.get("type") == "event":
                 if self.event_listener is not None:
                     self.event_listener(message)
@@ -229,7 +242,7 @@ class HomeAssistantClient:
 
     def run(self):
         self.loop.run_until_complete(self._connect())
-        LOG.info(self.loop.is_running())
+        LOG.info(f"self.loop.is_running={self.loop.is_running()}")
 
     def connect(self):
         self.thread.start()
