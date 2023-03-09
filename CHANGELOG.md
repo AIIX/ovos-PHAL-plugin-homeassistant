@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/HEAD)
+## [V0.0.0a5](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0a5) (2023-03-08)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a4...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a4...V0.0.0a5)
 
 **Merged pull requests:**
 
