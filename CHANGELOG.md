@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.1...HEAD)
+
+**Merged pull requests:**
+
+- fix: repo URL in readme was AIIX's original [\#10](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/10) ([ChanceNCounter](https://github.com/ChanceNCounter))
+
+## [V0.0.1](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.1) (2023-03-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0...V0.0.1)
+
 ## [V0.0.0](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0) (2023-03-08)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a5...V0.0.0)
