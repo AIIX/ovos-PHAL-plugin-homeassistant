@@ -2,7 +2,20 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a3...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a4...HEAD)
+
+**Implemented enhancements:**
+
+- Support passing requests to Assist [\#12](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/issues/12)
+- Support Scenes and Automations [\#11](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/issues/11)
+
+**Merged pull requests:**
+
+- Add support for key navigation for plasma bigscreen [\#7](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/7) ([AIIX](https://github.com/AIIX))
+
+## [V0.0.2a4](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a4) (2023-05-30)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a3...V0.0.2a4)
 
 **Merged pull requests:**
 
