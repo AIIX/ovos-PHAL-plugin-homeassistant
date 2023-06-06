@@ -1,8 +1,17 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/HEAD)
+## [0.0.2a6](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/0.0.2a6) (2023-06-06)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a4...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a5...0.0.2a6)
+
+**Merged pull requests:**
+
+- Update dependencies [\#25](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/25) ([NeonDaniel](https://github.com/NeonDaniel))
+- Update GitHub release automation [\#24](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/24) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a5](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a5) (2023-05-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a4...V0.0.2a5)
 
 **Implemented enhancements:**
 
@@ -44,49 +53,6 @@
 **Merged pull requests:**
 
 - fix: repo URL in readme was AIIX's original [\#10](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/10) ([ChanceNCounter](https://github.com/ChanceNCounter))
-
-## [V0.0.1](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.1) (2023-03-09)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0...V0.0.1)
-
-## [V0.0.0](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0) (2023-03-08)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a5...V0.0.0)
-
-## [V0.0.0a5](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0a5) (2023-03-08)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a4...V0.0.0a5)
-
-**Merged pull requests:**
-
-- Add stable version specs to all dependencies [\#9](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/9) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.0a4](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0a4) (2023-03-08)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a3...V0.0.0a4)
-
-**Merged pull requests:**
-
-- Handle group entities and add debug logging [\#8](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/8) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.0a3](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0a3) (2023-02-02)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.0a2...V0.0.0a3)
-
-**Merged pull requests:**
-
-- Consume events for websocket connections instead of polling [\#6](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/6) ([AIIX](https://github.com/AIIX))
-
-## [V0.0.0a2](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.0a2) (2023-02-02)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/f92d2168b7053c3a58430237bfb9d9a4dcb0ae67...V0.0.0a2)
-
-**Merged pull requests:**
-
-- Add workflow required for automation and oauth dep [\#5](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/5) ([AIIX](https://github.com/AIIX))
-- Switch wsconnector to internal socket client [\#3](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/3) ([AIIX](https://github.com/AIIX))
-- Add grouping support, camera and switch entity and multiple fixes [\#2](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/2) ([AIIX](https://github.com/AIIX))
-- Add Websocket API [\#1](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/1) ([NeonDaniel](https://github.com/NeonDaniel))
 
 
 
