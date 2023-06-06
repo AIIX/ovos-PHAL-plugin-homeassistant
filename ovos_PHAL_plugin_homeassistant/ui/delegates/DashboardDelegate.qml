@@ -6,6 +6,7 @@ import Mycroft 1.0 as Mycroft
 import QtGraphicalEffects 1.0
 
 ItemDelegate {
+    id: dashboardDelegate
     property var deviceType: modelData.type
     implicitWidth: dashboardGridView.cellWidth
     implicitHeight: dashboardGridView.cellHeight
@@ -23,7 +24,9 @@ ItemDelegate {
     background: Rectangle {
         color: Kirigami.Theme.backgroundColor
         radius: 10
-    }            
+        border.width: dashboardDelegate.activeFocus ? 2 : 0
+        border.color: dashboardDelegate.activeFocus ? Kirigami.Theme.highlightColor : "transparent"
+    }
 
     contentItem: Item {
 
@@ -77,6 +80,10 @@ ItemDelegate {
                 }
             }
         }
+    }
+
+    Keys.onReturnPressed: {
+        clicked()
     }
 
     onClicked: {

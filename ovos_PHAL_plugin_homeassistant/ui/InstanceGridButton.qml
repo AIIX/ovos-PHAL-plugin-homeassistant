@@ -10,9 +10,9 @@ Rectangle {
     id: gridItem
     Layout.fillWidth: true
     Layout.fillHeight: true
-    color: "transparent"
-    border.color: Kirigami.Theme.highlightColor
-    border.width: 1
+    color: gridItem.activeFocus ? Kirigami.Theme.highlightColor : "transparent"
+    border.color: gridItem.activeFocus ? Kirigami.Theme.textColor : Kirigami.Theme.highlightColor
+    border.width: gridItem.activeFocus ? 2 : 1
     radius: 5
     property int index
     property alias icon: onDisplayIconType.source
@@ -20,6 +20,13 @@ Rectangle {
     property bool hasAction: false
     property var action
     property var actionData
+
+    Keys.onReturnPressed: {
+        loginChoiceStackLayout.currentIndex = index
+        if (gridItem.hasAction) {
+            Mycroft.MycroftController.sendRequest(action, actionData)
+        }
+    }
 
     MouseArea {
         anchors.fill: parent

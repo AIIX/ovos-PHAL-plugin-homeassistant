@@ -2,6 +2,8 @@
 
 The PHAL Plugin provides GUI interfaces and API for Home Assistant Instants.
 
+NOTE: this plugin is roadmapped for merging with https://github.com/OpenVoiceOS/ovos-PHAL-plugin-commonIOT for ovos-core release 0.0.9, the UI will become IOT framework agnostic
+
 # Demo GIF
 ![HomeAssistant PHAL Demo](demo/demo.gif)
 
@@ -15,12 +17,12 @@ Note: PIP install from URL will not install the .desktop file and icon if instal
 Note: PIP install will attempt to install the .desktop file and icon to the system directory, or user directory if the system directory is not writable. If this is not a virtual environemnt.
 
 ```bash
-pip install git+https://github.com/AIIX/ovos-PHAL-plugin-homeassistant
+pip install git+https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant
 ```
 
 2. Manual Install from Git Clone
 ```bash
-git clone https://github.com/AIIX/ovos-PHAL-plugin-homeassistant
+git clone https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant
 cd ovos-PHAL-plugin-homeassistant
 cp -r res/desktop/ovos-phal-homeassistant.desktop ~/.local/share/applications/
 cp -r res/icon/ovos-phal-homeassistant.png ~/.local/share/icons/
