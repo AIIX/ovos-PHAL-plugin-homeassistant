@@ -1,58 +1,12 @@
 # Changelog
 
-## [V0.0.2a6](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a6) (2023-06-06)
+## [0.0.3a1](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/0.0.3a1) (2023-06-10)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a5...V0.0.2a6)
-
-**Merged pull requests:**
-
-- Update dependencies [\#25](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/25) ([NeonDaniel](https://github.com/NeonDaniel))
-- Update GitHub release automation [\#24](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/24) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.2a5](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a5) (2023-05-31)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a4...V0.0.2a5)
-
-**Implemented enhancements:**
-
-- Support passing requests to Assist [\#12](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/issues/12)
-- Support Scenes and Automations [\#11](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/issues/11)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2...0.0.3a1)
 
 **Merged pull requests:**
 
-- Add support for key navigation for plasma bigscreen [\#7](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/7) ([AIIX](https://github.com/AIIX))
-
-## [V0.0.2a4](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a4) (2023-05-30)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a3...V0.0.2a4)
-
-**Merged pull requests:**
-
-- refactor: move all logic from VUI to PHAL [\#20](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/20) ([mikejgray](https://github.com/mikejgray))
-
-## [V0.0.2a3](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a3) (2023-05-16)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a2...V0.0.2a3)
-
-## [V0.0.2a2](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a2) (2023-05-12)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.2a1...V0.0.2a2)
-
-**Closed issues:**
-
-- Add PyPI Automation [\#4](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/issues/4)
-
-**Merged pull requests:**
-
-- Fix: disable empty qr code page [\#13](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/13) ([AIIX](https://github.com/AIIX))
-
-## [V0.0.2a1](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.2a1) (2023-03-14)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.1...V0.0.2a1)
-
-**Merged pull requests:**
-
-- fix: repo URL in readme was AIIX's original [\#10](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/10) ([ChanceNCounter](https://github.com/ChanceNCounter))
+- Pass configuration to GUIInterface [\#27](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/27) ([NeonDaniel](https://github.com/NeonDaniel))
 
 
 
