@@ -1,14 +1,13 @@
 import uuid
-import asyncio
 from copy import deepcopy
 from os.path import dirname, join
 from typing import Optional
 
-from pfzy import fuzzy_match
 from ovos_utils.log import LOG
 from ovos_bus_client import Message
 from ovos_plugin_manager.phal import PHALPlugin
 from ovos_utils.gui import GUIInterface
+from ovos_utils.parse import match_one
 from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantRESTConnector, HomeAssistantWSConnector
 from ovos_PHAL_plugin_homeassistant.logic.device import (HomeAssistantSensor,
                                                          HomeAssistantBinarySensor,
@@ -347,6 +346,7 @@ class HomeAssistantPlugin(PHALPlugin):
 
         # Device ID not provided, usually VUI
         device = message.data.get("device")
+        device_result = match_one(device, self.registered_device_names)
         device_result = self.fuzzy_match_name(
                             self.registered_devices,
                             device,
@@ -815,14 +815,10 @@ class HomeAssistantPlugin(PHALPlugin):
         """Given a list of device names, fuzzy match the spoken name to the most likely one.
         Returns the device id of the most likely match or None if no match is found.
         """
-        # https://github.com/kazhala/pfzy/issues/1 fuzzy_match mutates its haystack
-        device_names_haystack = deepcopy(device_names)
-        try:
-            result = asyncio.run(fuzzy_match(spoken_name, device_names_haystack))
-            if result:
-                return devices_list[device_names.index(result[0].get("value"))].device_id
-            else:
-                return None
-        except TypeError:
-            LOG.error(f"Failed to fuzzy match device name {spoken_name}", exc_info=True)
+        device, score = match_one(spoken_name, device_names)
+        if score > 0.75:
+            return devices_list[device_names.index(device)].device_id
+        else:
+            LOG.info(f"Device name '{spoken_name}' not found, closest match is '{device}' with confidence score {score}")
+            LOG.info(f"Score of {score} is too low, returning None")
             return None
