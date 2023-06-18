@@ -743,7 +743,7 @@ class HomeAssistantPlugin(PHALPlugin):
         """
         instance = message.data.get("instance", None)
         if instance:
-            self.temporary_instance = instance
+            self.temporary_instance = instance.lower()
             self.request_host_info_from_oauth()
 
     def oauth_register(self):
