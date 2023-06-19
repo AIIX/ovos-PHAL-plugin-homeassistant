@@ -51,6 +51,20 @@ Plugin Supports Two Configuration Methods:
         }
    ```
 
+The config also takes an optional property, `brightness_increment`, which is the amount to increment/decrement the brightness of a light when the brightness up/down commands are sent. The default value is 10 and represents a percentage, e.g. 10%.
+
+Sample config:
+
+```json
+        "PHAL": {
+            "ovos-PHAL-plugin-homeassistant": {
+                "host": "https://someurl.toinstance",
+                "api_key": "api key from the instance",
+                "brightness_increment": 5
+            }
+        }
+```
+
 ### Usage
 
 The plugin provides a GUI interface for Home Assistant Instances. It also provides an API for other plugins or skills to user.

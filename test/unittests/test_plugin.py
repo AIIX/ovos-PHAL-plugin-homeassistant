@@ -583,3 +583,39 @@ class TestHomeAssistantPlugin(unittest.TestCase):
                     self.assertFalse(mock_call.called)
                     self.assertTrue(mock_bus.called)
                     self.assertTrue(mock_fuzzy_search.called)
+
+    def test_brightness_increment_increase(self):
+        fake_bulb = self.plugin.device_types["light"](
+            FakeConnector(),
+                "test_light",
+                "mdi:light",
+                "test_light",
+                "on",
+                {"friendly_name": "Test Light"},
+                "Living Room",
+                True,
+            )
+        with patch.object(fake_bulb, "call_function") as mock_call:
+            with patch.object(fake_bulb, "update_device"):
+                fake_bulb.increase_brightness(20)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": 20})
+                fake_bulb.increase_brightness(50)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": 50})
+
+    def test_brightness_increment_decrease(self):
+        fake_bulb = self.plugin.device_types["light"](
+            FakeConnector(),
+                "test_light",
+                "mdi:light",
+                "test_light",
+                "on",
+                {"friendly_name": "Test Light"},
+                "Living Room",
+                True,
+            )
+        with patch.object(fake_bulb, "call_function") as mock_call:
+            with patch.object(fake_bulb, "update_device"):
+                fake_bulb.decrease_brightness(20)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": -20})
+                fake_bulb.decrease_brightness(50)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": -50})

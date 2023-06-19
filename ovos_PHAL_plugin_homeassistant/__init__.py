@@ -58,6 +58,7 @@ class HomeAssistantPlugin(PHALPlugin):
         self.instance_available = False
         self.use_ws = False
         self.device_types = SUPPORTED_DEVICES
+        self.brightness_increment = self.get_brightness_increment()
 
         # BUS API FOR HOME ASSISTANT
         self.bus.on("ovos.phal.plugin.homeassistant.get.devices",
@@ -111,6 +112,14 @@ class HomeAssistantPlugin(PHALPlugin):
         self.bus.on(f"oauth.token.response.{self.munged_id}", self.handle_token_oauth_response)
 
         self.init_configuration()
+
+    def get_brightness_increment(self) -> int:
+        """ Get the brightness increment from the config
+
+            Returns:
+                int: The brightness increment
+        """
+        return self.config.get("brightness_increment", 10)
 
 # SETUP INSTANCE SUPPORT
     def validate_instance_connection(self, host, api_key):
@@ -537,7 +546,7 @@ class HomeAssistantPlugin(PHALPlugin):
         device_id, spoken_device = self._gather_device_id(message)
         for device in self.registered_devices:
             if device.device_id == device_id:
-                brightness = device.increase_brightness()
+                brightness = device.increase_brightness(self.brightness_increment)
                 return self.bus.emit(message.response(data={
                     "device": spoken_device,
                     "brightness": get_percentage_brightness_from_ha_value(brightness)
@@ -555,7 +564,7 @@ class HomeAssistantPlugin(PHALPlugin):
         device_id, spoken_device = self._gather_device_id(message)
         for device in self.registered_devices:
             if device.device_id == device_id:
-                brightness = device.decrease_brightness()
+                brightness = device.decrease_brightness(self.brightness_increment)
                 return self.bus.emit(message.response(data={
                     "device": spoken_device,
                     "brightness": get_percentage_brightness_from_ha_value(brightness)
