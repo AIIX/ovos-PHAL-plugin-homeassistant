@@ -546,10 +546,10 @@ class HomeAssistantPlugin(PHALPlugin):
         device_id, spoken_device = self._gather_device_id(message)
         for device in self.registered_devices:
             if device.device_id == device_id:
-                brightness = device.increase_brightness(self.brightness_increment)
+                device.increase_brightness(self.brightness_increment)
                 return self.bus.emit(message.response(data={
                     "device": spoken_device,
-                    "brightness": get_percentage_brightness_from_ha_value(brightness)
+                    "brightness": get_percentage_brightness_from_ha_value(device.get_brightness())
                     }))
         response = "Device id not provided"
         LOG.error(response)
@@ -567,7 +567,7 @@ class HomeAssistantPlugin(PHALPlugin):
                 brightness = device.decrease_brightness(self.brightness_increment)
                 return self.bus.emit(message.response(data={
                     "device": spoken_device,
-                    "brightness": get_percentage_brightness_from_ha_value(brightness)
+                    "brightness": get_percentage_brightness_from_ha_value(device.get_brightness())
                     }))
         response = "Device id not provided"
         LOG.error(response)
