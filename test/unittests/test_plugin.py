@@ -133,7 +133,7 @@ class TestHomeAssistantPlugin(unittest.TestCase):
         # We want to make sure to at least instantiate one of every type in our tests
         self.assertSetEqual(set(SUPPORTED_DEVICES.keys()), self.testable_devices)
 
-    def test_fuzzy_match_name(self):
+    def test_fuzzy_match_name_does_not_mutate(self):
         print(f"Pre-fuzzy_match: {self.plugin.registered_device_names[0]}")
         device_id = self.plugin.fuzzy_match_name(
             self.plugin.registered_devices,
@@ -144,6 +144,25 @@ class TestHomeAssistantPlugin(unittest.TestCase):
         # pfzy has mutated this before, we want to make sure it doesn't
         print(f"Post-fuzzy_match: {self.plugin.registered_device_names[0]}")
         self.assertIsInstance(self.plugin.registered_device_names[0], str)
+
+    def test_fuzzy_match_name_handles_underscores(self):
+        test_switch = self.plugin.device_types["switch"](
+                FakeConnector(),
+                "test_switch",
+                "mdi:switch",
+                "test_switch",
+                "on",
+                {"friendly_name": None},
+                "Living Room",
+                True,
+            )
+        # Overly broad search returning the result
+        notMatch = self.plugin.fuzzy_match_name([test_switch], "test", ["test_switch"])
+        self.assertNotEqual(notMatch, "test_switch")
+        # Handle underscores appropriately
+        match = self.plugin.fuzzy_match_name([test_switch], "test switch", ["test_switch"])
+        self.assertEqual(match, "test_switch")
+        
 
     # Get device
     def test_return_device_response_when_passed_explicitly(self):
@@ -564,3 +583,39 @@ class TestHomeAssistantPlugin(unittest.TestCase):
                     self.assertFalse(mock_call.called)
                     self.assertTrue(mock_bus.called)
                     self.assertTrue(mock_fuzzy_search.called)
+
+    def test_brightness_increment_increase(self):
+        fake_bulb = self.plugin.device_types["light"](
+            FakeConnector(),
+                "test_light",
+                "mdi:light",
+                "test_light",
+                "on",
+                {"friendly_name": "Test Light"},
+                "Living Room",
+                True,
+            )
+        with patch.object(fake_bulb, "call_function") as mock_call:
+            with patch.object(fake_bulb, "update_device"):
+                fake_bulb.increase_brightness(20)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": 20})
+                fake_bulb.increase_brightness(50)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": 50})
+
+    def test_brightness_increment_decrease(self):
+        fake_bulb = self.plugin.device_types["light"](
+            FakeConnector(),
+                "test_light",
+                "mdi:light",
+                "test_light",
+                "on",
+                {"friendly_name": "Test Light"},
+                "Living Room",
+                True,
+            )
+        with patch.object(fake_bulb, "call_function") as mock_call:
+            with patch.object(fake_bulb, "update_device"):
+                fake_bulb.decrease_brightness(20)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": -20})
+                fake_bulb.decrease_brightness(50)
+                mock_call.assert_called_with("turn_on", {"brightness_step_pct": -50})
