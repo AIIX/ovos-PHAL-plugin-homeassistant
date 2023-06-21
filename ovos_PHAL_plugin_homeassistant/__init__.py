@@ -59,6 +59,7 @@ class HomeAssistantPlugin(PHALPlugin):
         self.use_ws = False
         self.device_types = SUPPORTED_DEVICES
         self.brightness_increment = self.get_brightness_increment()
+        self.search_confidence_threshold = self.get_search_confidence_threshold()
 
         # BUS API FOR HOME ASSISTANT
         self.bus.on("ovos.phal.plugin.homeassistant.get.devices",
@@ -120,6 +121,14 @@ class HomeAssistantPlugin(PHALPlugin):
                 int: The brightness increment
         """
         return self.config.get("brightness_increment", 10)
+
+    def get_search_confidence_threshold(self) -> int:
+        """ Get the search confidence threshold from the config
+
+            Returns:
+                int: The search confidence threshold value, default 0.5
+        """
+        return self.config.get("search_confidence_threshold", 0.5)
 
 # SETUP INSTANCE SUPPORT
     def validate_instance_connection(self, host, api_key):
@@ -564,7 +573,7 @@ class HomeAssistantPlugin(PHALPlugin):
         device_id, spoken_device = self._gather_device_id(message)
         for device in self.registered_devices:
             if device.device_id == device_id:
-                brightness = device.decrease_brightness(self.brightness_increment)
+                device.decrease_brightness(self.brightness_increment)
                 return self.bus.emit(message.response(data={
                     "device": spoken_device,
                     "brightness": get_percentage_brightness_from_ha_value(device.get_brightness())
@@ -825,7 +834,7 @@ class HomeAssistantPlugin(PHALPlugin):
         Returns the device id of the most likely match or None if no match is found.
         """
         device, score = match_one(spoken_name, device_names)
-        if score > 0.75:
+        if score > self.search_confidence_threshold:
             return devices_list[device_names.index(device)].device_id
         else:
             LOG.info(f"Device name '{spoken_name}' not found, closest match is '{device}' with confidence score {score}")
