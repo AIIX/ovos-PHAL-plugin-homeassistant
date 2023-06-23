@@ -156,13 +156,13 @@ class TestHomeAssistantPlugin(unittest.TestCase):
                 "Living Room",
                 True,
             )
-        # Overly broad search returning the result
-        notMatch = self.plugin.fuzzy_match_name([test_switch], "test", ["test_switch"])
+        plugin = HomeAssistantPlugin(FakeBus(None), {"search_confidence_threshold": 0.75})
+        # Overly broad search returning the result with high confidence score
+        notMatch = plugin.fuzzy_match_name([test_switch], "test", ["test_switch"])
         self.assertNotEqual(notMatch, "test_switch")
         # Handle underscores appropriately
-        match = self.plugin.fuzzy_match_name([test_switch], "test switch", ["test_switch"])
+        match = plugin.fuzzy_match_name([test_switch], "test switch", ["test_switch"])
         self.assertEqual(match, "test_switch")
-        
 
     # Get device
     def test_return_device_response_when_passed_explicitly(self):

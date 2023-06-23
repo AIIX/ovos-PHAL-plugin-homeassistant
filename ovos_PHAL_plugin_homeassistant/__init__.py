@@ -59,7 +59,6 @@ class HomeAssistantPlugin(PHALPlugin):
         self.use_ws = False
         self.device_types = SUPPORTED_DEVICES
         self.brightness_increment = self.get_brightness_increment()
-        self.search_confidence_threshold = self.get_search_confidence_threshold()
 
         # BUS API FOR HOME ASSISTANT
         self.bus.on("ovos.phal.plugin.homeassistant.get.devices",
@@ -122,7 +121,8 @@ class HomeAssistantPlugin(PHALPlugin):
         """
         return self.config.get("brightness_increment", 10)
 
-    def get_search_confidence_threshold(self) -> int:
+    @property
+    def search_confidence_threshold(self) -> int:
         """ Get the search confidence threshold from the config
 
             Returns:
