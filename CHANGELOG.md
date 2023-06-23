@@ -1,8 +1,17 @@
 # Changelog
 
-## [0.0.3a2](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/0.0.3a2) (2023-06-20)
+## [0.0.3a3](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/0.0.3a3) (2023-06-23)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.3a1...0.0.3a2)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.3a2...0.0.3a3)
+
+**Merged pull requests:**
+
+- feat: adjustable search confidence threshold [\#34](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/34) ([mikejgray](https://github.com/mikejgray))
+- Update automation to shared actions [\#33](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/pull/33) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.3a2](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/tree/V0.0.3a2) (2023-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant/compare/V0.0.3a1...V0.0.3a2)
 
 **Implemented enhancements:**
 
