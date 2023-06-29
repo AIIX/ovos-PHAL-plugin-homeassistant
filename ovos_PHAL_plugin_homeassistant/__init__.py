@@ -1,14 +1,13 @@
 import uuid
-import asyncio
 from copy import deepcopy
 from os.path import dirname, join
 from typing import Optional
 
-from pfzy import fuzzy_match
 from ovos_utils.log import LOG
 from ovos_bus_client import Message
 from ovos_plugin_manager.phal import PHALPlugin
 from ovos_utils.gui import GUIInterface
+from ovos_utils.parse import match_one
 from ovos_PHAL_plugin_homeassistant.logic.connector import HomeAssistantRESTConnector, HomeAssistantWSConnector
 from ovos_PHAL_plugin_homeassistant.logic.device import (HomeAssistantSensor,
                                                          HomeAssistantBinarySensor,
@@ -35,6 +34,7 @@ SUPPORTED_DEVICES = {
             "automation": HomeAssistantAutomation,
         }
 
+
 class HomeAssistantPlugin(PHALPlugin):
     def __init__(self, bus=None, config=None):
         """ Initialize the plugin
@@ -43,7 +43,8 @@ class HomeAssistantPlugin(PHALPlugin):
                 bus (MycroftBusClient): The Mycroft bus client
                 config (dict): The plugin configuration
         """
-        super().__init__(bus=bus, name="ovos-PHAL-plugin-homeassistant", config=config)
+        super().__init__(bus=bus, name="ovos-PHAL-plugin-homeassistant",
+                         config=config)
         self.oauth_client_id = None
         self.munged_id = "ovos-PHAL-plugin-homeassistant_homeassistant-phal-plugin"
         self.temporary_instance = None
@@ -51,11 +52,13 @@ class HomeAssistantPlugin(PHALPlugin):
         self.registered_devices = []  # Device objects
         self.registered_device_names = []  # Device friendly/entity names
         self.bus = bus
-        self.gui = GUIInterface(bus=self.bus, skill_id=self.name)
+        self.gui = GUIInterface(bus=self.bus, skill_id=self.name,
+                                config=self.config_core.get('gui'))
         self.integrator = Integrator(self.bus, self.gui)
         self.instance_available = False
         self.use_ws = False
         self.device_types = SUPPORTED_DEVICES
+        self.brightness_increment = self.get_brightness_increment()
 
         # BUS API FOR HOME ASSISTANT
         self.bus.on("ovos.phal.plugin.homeassistant.get.devices",
@@ -109,6 +112,23 @@ class HomeAssistantPlugin(PHALPlugin):
         self.bus.on(f"oauth.token.response.{self.munged_id}", self.handle_token_oauth_response)
 
         self.init_configuration()
+
+    def get_brightness_increment(self) -> int:
+        """ Get the brightness increment from the config
+
+            Returns:
+                int: The brightness increment
+        """
+        return self.config.get("brightness_increment", 10)
+
+    @property
+    def search_confidence_threshold(self) -> int:
+        """ Get the search confidence threshold from the config
+
+            Returns:
+                int: The search confidence threshold value, default 0.5
+        """
+        return self.config.get("search_confidence_threshold", 0.5)
 
 # SETUP INSTANCE SUPPORT
     def validate_instance_connection(self, host, api_key):
@@ -344,6 +364,7 @@ class HomeAssistantPlugin(PHALPlugin):
 
         # Device ID not provided, usually VUI
         device = message.data.get("device")
+        device_result = match_one(device, self.registered_device_names)
         device_result = self.fuzzy_match_name(
                             self.registered_devices,
                             device,
@@ -534,10 +555,10 @@ class HomeAssistantPlugin(PHALPlugin):
         device_id, spoken_device = self._gather_device_id(message)
         for device in self.registered_devices:
             if device.device_id == device_id:
-                brightness = device.increase_brightness()
+                device.increase_brightness(self.brightness_increment)
                 return self.bus.emit(message.response(data={
                     "device": spoken_device,
-                    "brightness": get_percentage_brightness_from_ha_value(brightness)
+                    "brightness": get_percentage_brightness_from_ha_value(device.get_brightness())
                     }))
         response = "Device id not provided"
         LOG.error(response)
@@ -552,10 +573,10 @@ class HomeAssistantPlugin(PHALPlugin):
         device_id, spoken_device = self._gather_device_id(message)
         for device in self.registered_devices:
             if device.device_id == device_id:
-                brightness = device.decrease_brightness()
+                device.decrease_brightness(self.brightness_increment)
                 return self.bus.emit(message.response(data={
                     "device": spoken_device,
-                    "brightness": get_percentage_brightness_from_ha_value(brightness)
+                    "brightness": get_percentage_brightness_from_ha_value(device.get_brightness())
                     }))
         response = "Device id not provided"
         LOG.error(response)
@@ -740,7 +761,7 @@ class HomeAssistantPlugin(PHALPlugin):
         """
         instance = message.data.get("instance", None)
         if instance:
-            self.temporary_instance = instance
+            self.temporary_instance = instance.lower()
             self.request_host_info_from_oauth()
 
     def oauth_register(self):
@@ -812,14 +833,10 @@ class HomeAssistantPlugin(PHALPlugin):
         """Given a list of device names, fuzzy match the spoken name to the most likely one.
         Returns the device id of the most likely match or None if no match is found.
         """
-        # https://github.com/kazhala/pfzy/issues/1 fuzzy_match mutates its haystack
-        device_names_haystack = deepcopy(device_names)
-        try:
-            result = asyncio.run(fuzzy_match(spoken_name, device_names_haystack))
-            if result:
-                return devices_list[device_names.index(result[0].get("value"))].device_id
-            else:
-                return None
-        except TypeError:
-            LOG.error(f"Failed to fuzzy match device name {spoken_name}", exc_info=True)
+        device, score = match_one(spoken_name, device_names)
+        if score > self.search_confidence_threshold:
+            return devices_list[device_names.index(device)].device_id
+        else:
+            LOG.info(f"Device name '{spoken_name}' not found, closest match is '{device}' with confidence score {score}")
+            LOG.info(f"Score of {score} is too low, returning None")
             return None

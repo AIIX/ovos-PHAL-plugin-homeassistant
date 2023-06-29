@@ -279,21 +279,15 @@ class HomeAssistantLight(HomeAssistantDevice):
         self.call_function("turn_on", {"brightness": brightness})
         self.update_device()
 
-    def increase_brightness(self) -> int:
-        """Increase the brightness of the light by 10%."""
-        current_brightness = self.get_brightness()
-        bumped_value = min(current_brightness + current_brightness * 0.1, 255)
-        LOG.debug(f"Setting brightness to {bumped_value}")
-        self.call_function("turn_on", {"brightness": bumped_value})
+    def increase_brightness(self, brightness_increment: int = 10) -> int:
+        """Increase the brightness of the light by the brightness increment."""
+        bumped_value = self.call_function("turn_on", {"brightness_step_pct": brightness_increment})
         self.update_device()
         return bumped_value
 
-    def decrease_brightness(self) -> int:
-        """Decrease the brightness of the light by 10%."""
-        current_brightness = self.get_brightness()
-        decreased_value = max(current_brightness - current_brightness * 0.1, 0)
-        LOG.debug(f"Setting brightness to {decreased_value}")
-        self.call_function("turn_on", {"brightness": decreased_value})
+    def decrease_brightness(self, brightness_increment: int = 10) -> int:
+        """Decrease the brightness of the light by the brightness increment."""
+        decreased_value = self.call_function("turn_on", {"brightness_step_pct": -brightness_increment})
         self.update_device()
         return decreased_value
 

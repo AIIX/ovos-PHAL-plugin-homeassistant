@@ -5,11 +5,13 @@ The PHAL Plugin provides GUI interfaces and API for Home Assistant Instants.
 NOTE: this plugin is roadmapped for merging with https://github.com/OpenVoiceOS/ovos-PHAL-plugin-commonIOT for ovos-core release 0.0.9, the UI will become IOT framework agnostic
 
 # Demo GIF
+
 ![HomeAssistant PHAL Demo](demo/demo.gif)
 
 ### Installation
 
 Plugin Support Two Installation Methods:
+
 1. Install from Github URL
 
 Note: PIP install from URL will not install the .desktop file and icon if installing to a venv or virtual environment, so you need to manually install them to the system or user directory.
@@ -21,6 +23,7 @@ pip install git+https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant
 ```
 
 2. Manual Install from Git Clone
+
 ```bash
 git clone https://github.com/OpenVoiceOS/ovos-PHAL-plugin-homeassistant
 cd ovos-PHAL-plugin-homeassistant
@@ -32,13 +35,15 @@ pip install .
 ### Configuration (Instance Setup)
 
 Plugin Supports Two Configuration Methods:
+
 1. Using the GUI
+
    - Install the plugin
    - Open the application from the homescreen menu
    - Click the "Connect Instance" button
    - Enter the URL of the Home Assistant Instance
    - Enter the Long-Lived Access Token (API KEY)
-   - Press the "Confirm" button 
+   - Press the "Confirm" button
 
 2. Manually Editing the Config File
    - Add the following to the config file:
@@ -51,31 +56,55 @@ Plugin Supports Two Configuration Methods:
         }
    ```
 
+The config also takes some optional properties:
+
+`brightness_increment` - the amount to increment/decrement the brightness of a light when the brightness up/down commands are sent. The default value is 10 and represents a percentage, e.g. 10%.
+`search_confidence_threshold` - the confidence threshold for the search skill to use when searching for devices. The default value is 0.5, or 50%. Must be a value between 0 and 1.
+
+Sample config:
+
+```json
+        "PHAL": {
+            "ovos-PHAL-plugin-homeassistant": {
+                "host": "https://someurl.toinstance",
+                "api_key": "api key from the instance",
+                "brightness_increment": 5,
+                "search_confidence_threshold": 0.6
+            }
+        }
+```
+
 ### Usage
 
 The plugin provides a GUI interface for Home Assistant Instances. It also provides an API for other plugins or skills to user.
 
 The plugin is in early development, so there are some features that are not yet implemented. It currently supports the following entities:
+
 - Media Player
 - Light
 - Vacuum
 - Binary Sensor
 - Sensor
 
----------------------------------------  
+---
+
 #### BUS API (For Other Plugins / GUIs) - WIP / TODO Documentation
+
 #### EXPANDING DEVICE / ENTITY SUPPORT - WIP / TODO Documentation
----------------------------------------
+
+---
 
 ## Technical Documentation
 
 ### Python Controller Class Specification:
+
 Depending on how the controller communicates with the host instance, the minimum required connector initialization properties are:
 
 - **host** (type: string): Address to host instance
 - **api_key** (type: string): Access key for host instance authentication
 
 ### Python Device Class Specification:
+
 All devices are required to support the below minimal properties for device initialization.
 
 - **controller** (type: string): An instance of the controller class that handles all communications with the API the device talks to for example HomeAssistantConnector, All devices will use the controller class for any kind of communication.
