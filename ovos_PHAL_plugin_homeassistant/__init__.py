@@ -83,6 +83,7 @@ class HomeAssistantPlugin(PHALPlugin):
         self.bus.on("ovos.phal.plugin.homeassistant.decrease.light.brightness", self.handle_decrease_light_brightness)
         self.bus.on("ovos.phal.plugin.homeassistant.get.light.color", self.handle_get_light_color)
         self.bus.on("ovos.phal.plugin.homeassistant.set.light.color", self.handle_set_light_color)
+        self.bus.on("ovos.phal.plugin.homeassistant.check_connected", self.handle_check_connected)
 
         # GUI EVENTS
         self.bus.on("ovos-PHAL-plugin-homeassistant.home",
@@ -112,6 +113,10 @@ class HomeAssistantPlugin(PHALPlugin):
         self.bus.on(f"oauth.token.response.{self.munged_id}", self.handle_token_oauth_response)
 
         self.init_configuration()
+
+    def handle_check_connected(self, message: Message):
+        """Return a bus response indicating whether the plugin is connected to a Home Assistant instance."""
+        message.response(data=self.instance_available)
 
     def get_brightness_increment(self) -> int:
         """ Get the brightness increment from the config
